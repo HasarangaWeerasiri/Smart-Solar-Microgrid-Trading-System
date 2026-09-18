@@ -1,8 +1,20 @@
 using Scalar.AspNetCore;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
-// Add services to the container.
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var connectionString = builder.Configuration.GetConnectionString("MongoDB");
+    return new MongoClient(connectionString);
+});
+
+builder.Services.AddSingleton(sp =>
+{
+    var client = sp.GetRequiredService<IMongoClient>();
+    var databaseName = builder.Configuration["DatabaseSettings:DatabaseName"];
+    return client.GetDatabase(databaseName);
+});
 
 builder.Services.AddControllers();
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
