@@ -8,16 +8,15 @@
  *              saved in SQLite, it skips straight to the home screen.
  *
  *              Backoffice accounts are turned away here because they use the web app.
+ *              New prosumers open the register screen from the link at the bottom.
  *
- *              On Android 17 and newer it first asks for the local network permission,
- *              because without it Android silently blocks the call to the development API.
+ *              The local network permission needed on Android 17 is handled by the base
+ *              class, which every screen that calls the API shares.
  */
 
 package lk.sliit.microgrid.ui
 
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -26,22 +25,13 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.ProgressBar
 import android.widget.TextView
-import androidx.activity.result.contract.ActivityResultContracts
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.content.ContextCompat
 import lk.sliit.microgrid.R
 import lk.sliit.microgrid.data.local.SessionManager
 import lk.sliit.microgrid.data.model.Roles
 import lk.sliit.microgrid.data.remote.ApiException
 import lk.sliit.microgrid.data.remote.AuthApi
 
-class LoginActivity : AppCompatActivity() {
-
-    companion object {
-        // Android 17 (API level 37) introduced the local network permission.
-        private const val ANDROID_17 = 37
-        private const val LOCAL_NETWORK_PERMISSION = "android.permission.ACCESS_LOCAL_NETWORK"
-    }
+class LoginActivity : NetworkPermissionActivity() {
 
     private lateinit var sessionManager: SessionManager
     private lateinit var identifierInput: EditText
@@ -52,17 +42,6 @@ class LoginActivity : AppCompatActivity() {
 
     // Used to move back to the main thread after the network call finishes.
     private val mainHandler = Handler(Looper.getMainLooper())
-
-    // Shows Android's permission pop-up. When the user answers, the login continues or
-    // a message explains how to turn the permission on.
-    private val localNetworkPermissionRequest =
-        registerForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-            if (granted) {
-                attemptLogin()
-            } else {
-                showError(getString(R.string.error_local_network_denied))
-            }
-        }
 
     /**
      * Sets up the screen. If a session is already stored in SQLite, the user is sent
@@ -92,6 +71,11 @@ class LoginActivity : AppCompatActivity() {
         progressBar = findViewById(R.id.progress_login)
 
         loginButton.setOnClickListener { attemptLogin() }
+
+        // A new prosumer has no account yet, so the sign-up screen is reachable from here.
+        findViewById<TextView>(R.id.link_register).setOnClickListener {
+            startActivity(Intent(this, RegisterActivity::class.java))
+        }
     }
 
     /**
@@ -107,54 +91,38 @@ class LoginActivity : AppCompatActivity() {
             return
         }
 
-        // Without this permission Android drops the request and it only times out later.
-        // Ask first; the permission callback calls attemptLogin() again once it is allowed.
-        if (needsLocalNetworkPermission()) {
-            localNetworkPermissionRequest.launch(LOCAL_NETWORK_PERMISSION)
-            return
-        }
+        // Android 17 needs permission before the app may reach the development server.
+        // Without it the request is dropped and only fails after a long timeout.
+        withLocalNetworkPermission {
+            showLoading(true)
+            hideError()
 
-        showLoading(true)
-        hideError()
+            Thread {
+                try {
+                    val user = AuthApi.login(identifier, password)
+                    val home = homeScreenForRole(user.role)
 
-        Thread {
-            try {
-                val user = AuthApi.login(identifier, password)
-                val home = homeScreenForRole(user.role)
+                    mainHandler.post {
+                        showLoading(false)
 
-                mainHandler.post {
-                    showLoading(false)
+                        if (home == null) {
+                            // Backoffice staff have no screens in the mobile app.
+                            showError(getString(R.string.error_backoffice_use_web))
+                            return@post
+                        }
 
-                    if (home == null) {
-                        // Backoffice staff have no screens in the mobile app.
-                        showError(getString(R.string.error_backoffice_use_web))
-                        return@post
+                        // Save the session so the next launch does not ask for a password.
+                        sessionManager.save(user)
+                        openHome(home)
                     }
-
-                    // Save the session so the next launch does not ask for a password.
-                    sessionManager.save(user)
-                    openHome(home)
+                } catch (exception: ApiException) {
+                    mainHandler.post {
+                        showLoading(false)
+                        showError(exception.message ?: getString(R.string.error_login_failed))
+                    }
                 }
-            } catch (exception: ApiException) {
-                mainHandler.post {
-                    showLoading(false)
-                    showError(exception.message ?: getString(R.string.error_login_failed))
-                }
-            }
-        }.start()
-    }
-
-    /**
-     * True when this phone runs Android 17 or newer and the local network permission has
-     * not been granted yet. Older Android versions have no such permission and need nothing.
-     */
-    private fun needsLocalNetworkPermission(): Boolean {
-        if (Build.VERSION.SDK_INT < ANDROID_17) {
-            return false
+            }.start()
         }
-
-        return ContextCompat.checkSelfPermission(this, LOCAL_NETWORK_PERMISSION) !=
-            PackageManager.PERMISSION_GRANTED
     }
 
     /**
@@ -200,5 +168,13 @@ class LoginActivity : AppCompatActivity() {
      */
     private fun hideError() {
         errorText.visibility = View.GONE
+    }
+
+    /**
+     * Shows the permission refusal in this screen's own error area.
+     */
+    override fun onLocalNetworkPermissionDenied() {
+        showLoading(false)
+        showError(getString(R.string.error_local_network_denied))
     }
 }

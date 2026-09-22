@@ -19,8 +19,32 @@
     <string name="sign_in">Sign in</string>
     <string name="signing_in">Signing in…</string>
 
+    <!-- Register screen -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Register as a solar prosumer. Your NIC becomes your login and cannot be changed later.</string>
+    <string name="label_nic">NIC</string>
+    <string name="hint_nic_format">9 digits + V/X, or 12 digits</string>
+    <string name="label_full_name">Full name</string>
+    <string name="hint_full_name">Your name as on your NIC</string>
+    <string name="label_email_optional">Email (optional)</string>
+    <string name="hint_email">you@example.lk</string>
+    <string name="label_phone_optional">Phone (optional)</string>
+    <string name="hint_phone">07X XXX XXXX</string>
+    <string name="label_address_optional">Address (optional)</string>
+    <string name="hint_address">Where your solar panels are</string>
+    <string name="hint_password_rule">At least 8 characters</string>
+    <string name="create_account">Create account</string>
+    <string name="registering">Creating account…</string>
+    <string name="register_success_title">Account created</string>
+    <string name="register_success_message">Thank you, %1$s. A Backoffice officer must approve your account before you can sign in. Please try again later.</string>
+    <string name="back_to_sign_in">Back to sign in</string>
+    <string name="have_account_sign_in">Already have an account? Sign in</string>
+    <string name="no_account_register">New prosumer? Create an account</string>
+
     <!-- Errors -->
     <string name="error_fill_both_fields">Please fill in both fields.</string>
+    <string name="error_fill_required_fields">Please fill in NIC, full name and password.</string>
+    <string name="error_register_failed">Could not create the account. Please try again.</string>
     <string name="error_login_failed">Login failed. Please try again.</string>
     <string name="error_backoffice_use_web">Backoffice accounts use the web application, not the mobile app.</string>
     <string name="error_local_network_denied">The app needs permission to reach devices on your local network to contact the server. Allow it in Settings &gt; Apps &gt; Microgrid &gt; Permissions, then try again.</string>

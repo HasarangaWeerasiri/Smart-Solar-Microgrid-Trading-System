@@ -42,6 +42,11 @@
             </intent-filter>
         </activity>
 
+        <!-- Sign-up screen for a new prosumer. Reached from the link on the login screen. -->
+        <activity
+            android:name=".ui.RegisterActivity"
+            android:exported="false" />
+
         <!-- Home screen for a solar prosumer. -->
         <activity
             android:name=".ui.ProsumerHomeActivity"
