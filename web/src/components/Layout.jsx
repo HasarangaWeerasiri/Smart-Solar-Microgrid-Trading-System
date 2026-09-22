@@ -17,7 +17,10 @@ import { ROLES } from '../roles.js'
  */
 function linksForRole(role) {
   if (role === ROLES.BACKOFFICE) {
-    return [{ to: '/backoffice', label: 'Dashboard' }]
+    return [
+      { to: '/backoffice', label: 'Dashboard' },
+      { to: '/backoffice/users', label: 'Users' }
+    ]
   }
 
   if (role === ROLES.GRID_OPERATOR) {

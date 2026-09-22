@@ -73,13 +73,27 @@ Any code taken from a tutorial or external source gets a comment naming the sour
 - Maps key goes in mobile/local.properties (git-ignored). Web env values go in web/.env (git-ignored).
 
 ## 9. Git workflow
-- Work on feature branches: feature/<name>. Merge to main through Pull Requests.
+- `dev` is the integration branch. It always holds the latest working system, so **always start a new branch from `dev`** and merge back into `dev` through Pull Requests.
+- `main` holds the final submitted system. Merge `dev` into `main` at integration time and before submission, so the repository link in the report shows the complete project.
+- Work on feature branches named feature/<name>, for example feature/user-prosumer-api.
 - Do NOT commit or push. The member reviews `git diff` and commits themselves in small, descriptive commits.
 - Each member commits their own work from their own GitHub account.
 
-## 10. Current status
-- Done: API scaffold, Mongo settings + fail-fast guard, CORS, dev-only HTTPS redirect, folder structure, comment headers on existing files.
-- Not done: JWT wiring (UseAuthentication missing), all feature endpoints, /web scaffold, /mobile scaffold, README setup steps / contributions / video link.
+## 10. Current status (updated 23 September 2026)
+
+Shared foundation — done and merged into `dev`. Do not rebuild these:
+- API: JWT bearer login with role claims, role policies (BackofficeOnly, GridOperatorOnly, StaffOnly), BCrypt password hashing, a Backoffice user seeded at startup, typed Mongo and JWT settings with fail-fast guards, CORS policy "WebClient", dev-only HTTPS redirect, unique email index.
+- Web: Vite + React + Tailwind CSS v4. One API client at `web/src/api/client.js`, auth context with session restore, protected routes, login page with role redirect.
+- Mobile: native Kotlin, XML layouts. `SQLiteOpenHelper` session storage, one `ApiClient`, login with role-based home screens. Android 17 needs the ACCESS_LOCAL_NETWORK permission, which LoginActivity requests.
+- Docs: `docs/api-contract.md` (the endpoint contract) and `docs/postman-collection.json` (50 requests with assertions).
+
+Member A — auth and accounts:
+- Done: login API; staff user API (`/api/users`); prosumer API (`/api/prosumers`) with NIC validation, Pending-on-registration, ownership rules and Backoffice-only activation.
+- Not done: web pages for user management, pending activations and prosumer management; Android screens for register, edit profile and request deactivation.
+
+Not started: microgrid nodes and slots, energy reservations, dashboards / QR / maps (other members).
+
+Project level still to do: IIS hosting, sample data in all four collections, README setup steps, individual contributions and video link, the report and its diagrams.
 
 ## 11. How to work with the member
 - Plain, simple English. Keep technical terms as they are.

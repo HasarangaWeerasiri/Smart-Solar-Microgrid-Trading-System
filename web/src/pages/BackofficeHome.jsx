@@ -3,16 +3,18 @@
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Author: Lakshan
  * Created: 2026-09-22
- * Description: Landing page for Backoffice staff. For now it confirms the login worked and
- *              lists the sections each member will add. The cards become real pages as the
- *              modules are finished.
+ * Description: Landing page for Backoffice staff. Shows a card for each section of the
+ *              system. Finished sections link to their page; the rest show who is building
+ *              them, so the team can see progress at a glance.
  */
 
+import { Link } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext.jsx'
 
-// Sections planned for the Backoffice user, from the marking scheme.
-const PLANNED_SECTIONS = [
-  { title: 'User management', detail: 'Create Backoffice and Grid Operator users.', owner: 'Member A' },
+// Sections of the Backoffice area, from the marking scheme.
+// A section with a "to" is built; one without is still being worked on.
+const SECTIONS = [
+  { title: 'User management', detail: 'Create Backoffice and Grid Operator users.', owner: 'Member A', to: '/backoffice/users' },
   { title: 'Pending activations', detail: 'Approve new prosumer registrations.', owner: 'Member A' },
   { title: 'Prosumer management', detail: 'Edit, deactivate and reactivate prosumers.', owner: 'Member A' },
   { title: 'Microgrid nodes', detail: 'Register hubs with GPS, capacity and slots.', owner: 'Member B' },
@@ -33,29 +35,37 @@ export default function BackofficeHome() {
         Signed in as {user?.fullName} ({user?.email}).
       </p>
 
-      <div className="mt-6 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-        <p className="text-sm text-emerald-800">
-          Connected to the Web API. The token from login is being sent with every request.
-        </p>
-      </div>
+      <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {SECTIONS.map((section) => {
+          const card = (
+            <>
+              <h3 className="text-sm font-semibold text-slate-900">{section.title}</h3>
+              <p className="mt-1 text-sm text-slate-600">{section.detail}</p>
+              <span
+                className={`mt-3 inline-block rounded-full px-2 py-0.5 text-xs font-medium ${
+                  section.to ? 'bg-emerald-100 text-emerald-800' : 'bg-slate-100 text-slate-600'
+                }`}
+              >
+                {section.to ? 'Open' : `${section.owner} - in progress`}
+              </span>
+            </>
+          )
 
-      <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">
-        Sections to be built
-      </h2>
-
-      <div className="mt-3 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        {PLANNED_SECTIONS.map((section) => (
-          <div
-            key={section.title}
-            className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            <h3 className="text-sm font-semibold text-slate-900">{section.title}</h3>
-            <p className="mt-1 text-sm text-slate-600">{section.detail}</p>
-            <span className="mt-3 inline-block rounded-full bg-slate-100 px-2 py-0.5 text-xs font-medium text-slate-600">
-              {section.owner}
-            </span>
-          </div>
-        ))}
+          // A finished section is a link; an unfinished one is just a card.
+          return section.to ? (
+            <Link
+              key={section.title}
+              to={section.to}
+              className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm transition hover:border-slate-300 hover:shadow"
+            >
+              {card}
+            </Link>
+          ) : (
+            <div key={section.title} className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm">
+              {card}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
