@@ -15,6 +15,8 @@ import { useAuth } from './context/AuthContext.jsx'
 import BackofficeHome from './pages/BackofficeHome.jsx'
 import LoginPage from './pages/LoginPage.jsx'
 import OperatorHome from './pages/OperatorHome.jsx'
+import PendingActivationsPage from './pages/PendingActivationsPage.jsx'
+import ProsumersPage from './pages/ProsumersPage.jsx'
 import UsersPage from './pages/UsersPage.jsx'
 import { ROLES, homePathForRole } from './roles.js'
 
@@ -47,6 +49,8 @@ export default function App() {
           <Route element={<Layout />}>
             <Route path="/backoffice" element={<BackofficeHome />} />
             <Route path="/backoffice/users" element={<UsersPage />} />
+            <Route path="/backoffice/pending" element={<PendingActivationsPage />} />
+            <Route path="/backoffice/prosumers" element={<ProsumersPage />} />
           </Route>
         </Route>
 
