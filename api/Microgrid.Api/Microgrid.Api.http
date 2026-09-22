@@ -1,6 +1,7 @@
 @Microgrid.Api_HostAddress = http://localhost:5288
 
-GET {{Microgrid.Api_HostAddress}}/weatherforecast/
+### Health check - confirms the API is running and MongoDB is reachable
+GET {{Microgrid.Api_HostAddress}}/api/ping
 Accept: application/json
 
 ###

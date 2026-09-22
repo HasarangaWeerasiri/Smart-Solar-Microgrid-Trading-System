@@ -1,0 +1,743 @@
+{
+	"info": {
+		"_postman_id": "9f3c21ae-5b7d-4f1e-8a6c-2d4b71e0c913",
+		"name": "Smart Solar Microgrid Trading System - API",
+		"description": "API tests for the Smart Solar Microgrid Trading System (SLIIT SE4040).\n\n## How to use\n\n1. Start the API: `cd api/Microgrid.Api` then `dotnet run`\n2. Check the `baseUrl` variable matches where it is listening (default `http://localhost:5288`)\n3. Open the **Auth - Success** folder and run **1. Login - Backoffice** first. It saves the token automatically, so every later request is already authorised.\n4. Or press **Run** on the collection to run everything in order.\n\nEvery request has tests attached, so you can see pass/fail instead of reading the JSON yourself.\n\n## Folders\n\n- **Health** - checks the API is up and MongoDB is reachable\n- **Auth - Success** - the happy path: login, who am I, Backoffice-only access\n- **Auth - Failure** - wrong password, missing token, bad input\n- **Auth - Role and Status** - needs extra test accounts, see the folder description\n\nBatch F1 covers login only. User management endpoints arrive in batch A2.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Ping - API and MongoDB",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"MongoDB is connected\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"connected\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ping"
+							]
+						},
+						"description": "Confirms the API is running and that it can reach MongoDB Atlas. Run this first - if it fails, nothing else will work."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Success",
+			"item": [
+				{
+					"name": "1. Login - Backoffice (saves token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"A token was returned\", function () {",
+									"    pm.expect(data.token).to.be.a(\"string\");",
+									"    pm.expect(data.token.length).to.be.above(20);",
+									"});",
+									"",
+									"pm.test(\"Role is Backoffice\", function () {",
+									"    pm.expect(data.role).to.eql(\"Backoffice\");",
+									"});",
+									"",
+									"pm.test(\"Account is Active\", function () {",
+									"    pm.expect(data.status).to.eql(\"Active\");",
+									"});",
+									"",
+									"pm.test(\"No password is ever sent back\", function () {",
+									"    pm.expect(pm.response.text()).to.not.include(\"PasswordHash\");",
+									"    pm.expect(pm.response.text()).to.not.include(\"password\");",
+									"});",
+									"",
+									"// Save the token so the other requests can use it automatically.",
+									"pm.collectionVariables.set(\"token\", data.token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{backofficeEmail}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in the Backoffice user created automatically at startup.\n\nStaff log in with their email. Prosumers log in with their NIC - the same field and the same endpoint handles both.\n\nThe token is saved into the `token` collection variable, so you do not need to copy and paste it anywhere."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Me - who am I",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"Returns the logged in user\", function () {",
+									"    pm.expect(data.role).to.eql(\"Backoffice\");",
+									"    pm.expect(data.email).to.eql(pm.collectionVariables.get(\"backofficeEmail\"));",
+									"});",
+									"",
+									"pm.test(\"NIC is null for staff\", function () {",
+									"    pm.expect(data.nic).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Reads the user id out of the token and returns that user's details.\n\nBoth clients use this to restore a session and to show the user's name. `nic` is null here because this is a staff account, not a prosumer."
+					},
+					"response": []
+				},
+				{
+					"name": "3. Admin check - Backoffice token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Backoffice access confirmed\", function () {",
+									"    pm.expect(pm.response.json().message).to.include(\"confirmed\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "A Backoffice-only endpoint, protected with `[Authorize(Roles = Roles.Backoffice)]`.\n\nThe role is read from the signed token, not from anything the client sends, so a client cannot promote itself."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Failure",
+			"item": [
+				{
+					"name": "4. Login - wrong password (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Message does not reveal whether the user exists\", function () {",
+									"    pm.expect(pm.response.json().error).to.eql(\"Invalid login details.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{backofficeEmail}}\",\n    \"password\": \"ThisIsWrong123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A real user with the wrong password. Returns 401 with a general message."
+					},
+					"response": []
+				},
+				{
+					"name": "5. Login - unknown user (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Same message as a wrong password\", function () {",
+									"    pm.expect(pm.response.json().error).to.eql(\"Invalid login details.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"nobody@nowhere.lk\",\n    \"password\": \"AnyPassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A user that does not exist.\n\nImportant: the message is identical to the wrong-password case. If it said \"no such user\", an attacker could use the endpoint to find out which accounts exist."
+					},
+					"response": []
+				},
+				{
+					"name": "6. Login - empty body (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Both fields are reported as required\", function () {",
+									"    var errors = pm.response.json().errors;",
+									"    pm.expect(errors).to.have.property(\"Identifier\");",
+									"    pm.expect(errors).to.have.property(\"Password\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "No details at all. The `[Required]` attributes on LoginRequest reject this before any service code runs."
+					},
+					"response": []
+				},
+				{
+					"name": "7. Me - no token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "A protected endpoint called with no Authorization header. The JWT middleware rejects it before the controller runs."
+					},
+					"response": []
+				},
+				{
+					"name": "8. Admin check - no token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "No token at all. 401 means \"I do not know who you are\"."
+					},
+					"response": []
+				},
+				{
+					"name": "9. Admin check - invalid token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer not.a.real.token"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "A made-up token. The signature does not match the server's secret key, so it is rejected. This proves a client cannot write its own token."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Role and Status",
+			"item": [
+				{
+					"name": "10. Login - GridOperator (saves operatorToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"Role is GridOperator\", function () {",
+									"    pm.expect(data.role).to.eql(\"GridOperator\");",
+									"});",
+									"",
+									"pm.collectionVariables.set(\"operatorToken\", data.token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{operatorEmail}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in a Grid Operator and saves that token separately, so the next request can prove role blocking."
+					},
+					"response": []
+				},
+				{
+					"name": "11. Admin check - GridOperator token (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "This is the key role test.\n\n403 Forbidden, not 401. The token is perfectly valid and the server knows exactly who this is - but a Grid Operator is not allowed into a Backoffice-only function."
+					},
+					"response": []
+				},
+				{
+					"name": "12. Login - Pending prosumer by NIC (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Explains it is waiting for approval\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{pendingNic}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Business rule 4: a new prosumer registration starts as Pending and cannot log in until Backoffice approves it.\n\nNote this prosumer logs in with a NIC, not an email. The password was correct, so the answer is 403 and not 401."
+					},
+					"response": []
+				},
+				{
+					"name": "13. Login - Deactivated prosumer by NIC (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Tells the user to contact Backoffice\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Backoffice\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{deactivatedNic}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Business rule 3: a deactivated account cannot log in, and only a Backoffice officer can reactivate it. The error message says exactly that."
+					},
+					"response": []
+				},
+				{
+					"name": "14. Login - Pending prosumer, wrong password (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401, not 403\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Account status is not leaked\", function () {",
+									"    var error = pm.response.json().error;",
+									"    pm.expect(error).to.eql(\"Invalid login details.\");",
+									"    pm.expect(error).to.not.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{pendingNic}}\",\n    \"password\": \"ThisIsWrong123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A Pending account with the wrong password gives 401, not 403.\n\nThis proves the password is checked first. The account status is only revealed to someone who already proved they own the account."
+					},
+					"response": []
+				}
+			],
+			"description": "These four requests need three extra accounts that no endpoint can create yet - user management is batch A2.\n\nUntil then, ask the team to add them directly, or skip this folder. The accounts used here are:\n\n| Id / NIC | Role | Status |\n| --- | --- | --- |\n| TESTOP001 (testop@microgrid.lk) | GridOperator | Active |\n| TESTPEND002 | Prosumer | Pending |\n| TESTDEACT003 | Prosumer | Deactivated |\n\nAll three use the same password as the seeded admin."
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5288",
+			"type": "string"
+		},
+		{
+			"key": "backofficeEmail",
+			"value": "admin@microgrid.lk",
+			"type": "string"
+		},
+		{
+			"key": "seedPassword",
+			"value": "Admin@123",
+			"type": "string"
+		},
+		{
+			"key": "operatorEmail",
+			"value": "testop@microgrid.lk",
+			"type": "string"
+		},
+		{
+			"key": "pendingNic",
+			"value": "TESTPEND002",
+			"type": "string"
+		},
+		{
+			"key": "deactivatedNic",
+			"value": "TESTDEACT003",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "operatorToken",
+			"value": "",
+			"type": "string"
+		}
+	]
+}
