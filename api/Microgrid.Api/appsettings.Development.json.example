@@ -5,9 +5,8 @@
       "Microsoft.AspNetCore": "Warning"
     }
   },
-  "AllowedHosts": "*",
   "ConnectionStrings": {
-    "MongoDB": "<set in appsettings.Development.json>"
+    "MongoDB": "mongodb+srv://fakeUser:fakePassword@fake-cluster.abcde.mongodb.net/?retryWrites=true&w=majority"
   },
   "DatabaseSettings": {
     "DatabaseName": "SolarMicrogridDB"
@@ -15,13 +14,8 @@
   "Jwt": {
     "Issuer": "MicrogridApi",
     "Audience": "MicrogridClients",
-    "Key": "<set in appsettings.Development.json>",
+    "Key": "replace-this-with-your-own-long-random-secret-at-least-32-chars",
     "ExpiryMinutes": 480
-  },
-  "Seed": {
-    "BackofficeEmail": "admin@microgrid.lk",
-    "BackofficeFullName": "System Administrator",
-    "BackofficePassword": "Admin@123"
   },
   "Cors": {
     "AllowedOrigins": [ "http://localhost:5173" ]
