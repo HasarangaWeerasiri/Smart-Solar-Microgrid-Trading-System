@@ -83,7 +83,8 @@
 									"});",
 									"",
 									"// Save the token so the other requests can use it automatically.",
-									"pm.collectionVariables.set(\"token\", data.token);"
+									"pm.collectionVariables.set(\"token\", data.token);",
+									"pm.collectionVariables.set(\"adminUserId\", data.userId);"
 								]
 							}
 						}
@@ -696,6 +697,1544 @@
 				}
 			],
 			"description": "These four requests need three extra accounts that no endpoint can create yet - user management is batch A2.\n\nUntil then, ask the team to add them directly, or skip this folder. The accounts used here are:\n\n| Id / NIC | Role | Status |\n| --- | --- | --- |\n| TESTOP001 (testop@microgrid.lk) | GridOperator | Active |\n| TESTPEND002 | Prosumer | Pending |\n| TESTDEACT003 | Prosumer | Deactivated |\n\nAll three use the same password as the seeded admin."
+		},
+		{
+			"name": "A2a - Staff management (Backoffice only)",
+			"description": "Staff accounts: Backoffice and Grid Operator. Every endpoint here requires a Backoffice token.\n\nRun **Auth - Success > 1. Login - Backoffice** first so `{{token}}` and `{{adminUserId}}` are set. The GridOperator test needs `{{operatorToken}}` from the Auth - Role and Status folder.\n\nEach run creates one new Grid Operator with a unique email (there is no delete endpoint by design; accounts are deactivated, not deleted).",
+			"item": [
+				{
+					"name": "A2a-01 Create GridOperator (201, saves staffUserId)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A unique email on every run, so the collection can be re-run without a 409.",
+									"pm.collectionVariables.set(\"staffEmail\", \"operator.\" + Date.now() + \"@microgrid.lk\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"pm.test(\"Role is GridOperator and account is Active\", function () {",
+									"    pm.expect(data.role).to.eql(\"GridOperator\");",
+									"    pm.expect(data.status).to.eql(\"Active\");",
+									"});",
+									"pm.test(\"No password or hash is returned\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"password\");",
+									"});",
+									"pm.collectionVariables.set(\"staffUserId\", data.userId);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Backoffice creates a Grid Operator. Staff accounts start Active because a Backoffice officer created them.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator\",\n    \"email\": \"{{staffEmail}}\",\n    \"password\": \"Operator@123\",\n    \"role\": \"GridOperator\",\n    \"phone\": \"0771234567\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-02 Create - same email again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Emails must be unique across all accounts.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Duplicate Operator\",\n    \"email\": \"{{staffEmail}}\",\n    \"password\": \"Operator@123\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-03 Create - role Prosumer (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "The staff endpoint only accepts Backoffice or GridOperator. Prosumers register through /api/prosumers.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Wrong Role\",\n    \"email\": \"wrongrole@microgrid.lk\",\n    \"password\": \"Operator@123\",\n    \"role\": \"Prosumer\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-04 Create - weak password (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Passwords must be at least 8 characters (PasswordPolicy).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Weak Password\",\n    \"email\": \"weakpass@microgrid.lk\",\n    \"password\": \"short\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-05 List staff (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Only staff roles are listed\", function () {",
+									"    pm.response.json().forEach(function (u) { pm.expect([\"Backoffice\", \"GridOperator\"]).to.include(u.role); });",
+									"});",
+									"pm.test(\"No password hash anywhere\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"passwordhash\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "All staff accounts, newest first. Prosumers are never included."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-06 List - filter role=GridOperator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Every result is a GridOperator\", function () {",
+									"    pm.response.json().forEach(function (u) { pm.expect(u.role).to.eql(\"GridOperator\"); });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users?role=GridOperator",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "GridOperator"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-07 Get staff by id (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Returns the created account\", function () {",
+									"    pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"staffUserId\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-08 Get - prosumer id through staff endpoint (404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"200012345678"
+							]
+						},
+						"description": "Staff endpoints cannot read or change prosumer accounts, even by id."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-09 Update name and phone (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name was changed\", function () {",
+									"    pm.expect(pm.response.json().fullName).to.eql(\"Postman Test Operator Updated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						},
+						"description": "Leave newPassword out to keep the current password.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator Updated\",\n    \"email\": \"{{staffEmail}}\",\n    \"role\": \"GridOperator\",\n    \"phone\": \"0779999999\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-10 Update - email already used (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator Updated\",\n    \"email\": \"{{backofficeEmail}}\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-11 Backoffice changes OWN role (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{adminUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{adminUserId}}"
+							]
+						},
+						"description": "Guard: a Backoffice officer cannot remove their own admin access.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"System Administrator\",\n    \"email\": \"{{backofficeEmail}}\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-12 Deactivate the operator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is Deactivated\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Deactivated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"deactivate"
+							]
+						},
+						"description": "A deactivated account can no longer log in (login returns 403)."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-13 Deactivate again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-14 Reactivate the operator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is Active\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-15 Backoffice deactivates THEMSELVES (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{adminUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{adminUserId}}",
+								"deactivate"
+							]
+						},
+						"description": "Guard: prevents the last Backoffice officer from locking everyone out."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-16 GridOperator calls staff list (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Only Backoffice may manage users. Needs {{operatorToken}}."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-17 No token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "A2b - Prosumer accounts",
+			"description": "Prosumer registration, profile and approval. The NIC is the account id.\n\nRun **Auth - Success > 1. Login - Backoffice** first for `{{token}}`. The last check needs `{{operatorToken}}` from the Auth - Role and Status folder.\n\nEach run registers a prosumer with a fresh NIC, so the folder can be run repeatedly. Accounts are deactivated, never deleted, which is why old test prosumers stay in the list.",
+			"item": [
+				{
+					"name": "A2b-01 Register prosumer (201 Pending, saves prosumerNic)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A fresh 12-digit NIC each run so the folder can be re-run.",
+									"var nic = String(Date.now()).slice(0, 12);",
+									"pm.collectionVariables.set(\"prosumerNic\", nic);",
+									"pm.collectionVariables.set(\"prosumerEmail\", \"prosumer.\" + nic + \"@example.lk\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"pm.test(\"Starts Pending - self-registration needs approval\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});",
+									"pm.test(\"Role is Prosumer and the NIC is the account id\", function () {",
+									"    pm.expect(data.role).to.eql(\"Prosumer\");",
+									"    pm.expect(data.userId).to.eql(data.nic);",
+									"});",
+									"pm.test(\"No password is returned\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"password\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Open to anyone: a new prosumer has no account yet, so cannot have a token. Business rule 4: registration starts Pending.",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{prosumerNic}}\",\n    \"fullName\": \"Sunil Fernando\",\n    \"password\": \"{{prosumerPassword}}\",\n    \"email\": \"{{prosumerEmail}}\",\n    \"phone\": \"0712223333\",\n    \"address\": \"5 Lake Road, Kandy\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-02 Register - same NIC again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "The NIC is the MongoDB _id, so the database itself blocks a duplicate.",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{prosumerNic}}\",\n    \"fullName\": \"Copy Cat\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-03 Register - invalid NIC (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Must be 9 digits + V/X (old format) or 12 digits (new format).",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"12345\",\n    \"fullName\": \"Bad Nic\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-04 Register - weak password (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"199912345678\",\n    \"fullName\": \"Weak Pass\",\n    \"password\": \"short\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-05 Pending prosumer cannot log in yet (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"pm.test(\"Says it is waiting for approval\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{prosumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-06 Pending activations list (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Every row is Pending\", function () {",
+									"    pm.response.json().forEach(function (p) { pm.expect(p.status).to.eql(\"Pending\"); });",
+									"});",
+									"pm.test(\"Includes the prosumer just registered\", function () {",
+									"    var nic = pm.collectionVariables.get(\"prosumerNic\");",
+									"    pm.expect(pm.response.json().map(function (p) { return p.userId; })).to.include(nic);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers?status=Pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Pending"
+								}
+							]
+						},
+						"description": "This is what the web app's pending activations page calls."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-07 Backoffice approves the registration (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Now Active\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-08 Prosumer logs in (200, saves prosumerToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"prosumerToken\", pm.response.json().token);",
+									"pm.test(\"Prosumers log in with their NIC\", function () {",
+									"    pm.expect(pm.response.json().role).to.eql(\"Prosumer\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{prosumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-09 Prosumer reads OWN profile (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-10 Prosumer reads ANOTHER prosumer (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"200012345678"
+							]
+						},
+						"description": "A prosumer may only see their own profile. Needs another prosumer to exist (NIC 200012345678)."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-11 Prosumer edits OWN profile (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name changed but the NIC did not\", function () {",
+									"    pm.expect(pm.response.json().fullName).to.eql(\"Sunil Fernando Jr\");",
+									"    pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"prosumerNic\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}"
+							]
+						},
+						"description": "There is no nic field in the request body, so the primary key can never change.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Sunil Fernando Jr\",\n    \"email\": \"{{prosumerEmail}}\",\n    \"phone\": \"0719998888\",\n    \"address\": \"7 Hill Street, Kandy\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-12 Prosumer edits ANOTHER profile (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"200012345678"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Hacked Name\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-13 Prosumer lists all prosumers (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Listing is Backoffice only."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-14 Prosumer deactivates OWN account (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Now Deactivated\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Deactivated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"deactivate"
+							]
+						},
+						"description": "The mobile app's \"request account deactivation\" feature."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-15 Prosumer reactivates THEMSELVES (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						},
+						"description": "Business rule 3: only a Backoffice officer can reactivate a deactivated account."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-16 Backoffice reactivates them (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Active again\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-17 Backoffice deactivates a prosumer (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"deactivate"
+							]
+						},
+						"description": "The web app can also deactivate a prosumer profile."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-18 GridOperator lists prosumers (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						}
+					},
+					"response": []
+				}
+			]
 		}
 	],
 	"variable": [
@@ -737,6 +2276,41 @@
 		{
 			"key": "operatorToken",
 			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staffUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staffEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerNic",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerPassword",
+			"value": "Prosumer@123",
 			"type": "string"
 		}
 	]

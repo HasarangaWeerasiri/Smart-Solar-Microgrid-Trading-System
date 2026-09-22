@@ -97,6 +97,8 @@ builder.Services.AddSingleton(sp =>
 // Business logic services. All rules live here, never in a controller or a client.
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IUserService, UserService>();
+builder.Services.AddScoped<IStaffService, StaffService>();
+builder.Services.AddScoped<IProsumerService, ProsumerService>();
 builder.Services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 
 // Check every incoming "Authorization: Bearer <token>" header against our own signing key.
