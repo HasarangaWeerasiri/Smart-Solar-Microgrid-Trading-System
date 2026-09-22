@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: network_security_config.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Lakshan
+    Created: 2026-09-22
+    Description: Android blocks plain HTTP by default since Android 9. During development
+                 the API runs on plain HTTP, so cleartext is allowed for the development
+                 addresses only. Every other address still requires HTTPS.
+
+                 10.0.2.2 is how the Android emulator reaches the development machine.
+                 Add your own machine's LAN address here to test on a real phone.
+-->
+<network-security-config>
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+        <domain includeSubdomains="true">192.168.1.6</domain>
+    </domain-config>
+</network-security-config>

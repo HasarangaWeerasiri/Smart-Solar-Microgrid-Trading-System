@@ -1,0 +1,35 @@
+<!--
+    File: strings.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Lakshan
+    Created: 2026-09-22
+    Description: All text shown in the app. Keeping text here instead of in the layouts
+                 means it is written once and can be translated later.
+-->
+<resources>
+    <string name="app_name">Microgrid</string>
+    <string name="app_title">Smart Solar Microgrid</string>
+
+    <!-- Login screen -->
+    <string name="login_subtitle">Prosumer and Grid Operator sign in</string>
+    <string name="label_identifier">NIC or email</string>
+    <string name="hint_identifier">Prosumers use NIC, operators use email</string>
+    <string name="label_password">Password</string>
+    <string name="hint_password">Your password</string>
+    <string name="sign_in">Sign in</string>
+    <string name="signing_in">Signing in…</string>
+
+    <!-- Errors -->
+    <string name="error_fill_both_fields">Please fill in both fields.</string>
+    <string name="error_login_failed">Login failed. Please try again.</string>
+    <string name="error_backoffice_use_web">Backoffice accounts use the web application, not the mobile app.</string>
+    <string name="error_local_network_denied">The app needs permission to reach devices on your local network to contact the server. Allow it in Settings &gt; Apps &gt; Microgrid &gt; Permissions, then try again.</string>
+
+    <!-- Home screens -->
+    <string name="welcome_named">Welcome, %1$s</string>
+    <string name="nic_label">NIC: %1$s</string>
+    <string name="role_label">Role: %1$s</string>
+    <string name="log_out">Log out</string>
+    <string name="prosumer_sections">Coming next: reserve an energy slot, view bookings and history, your QR code, and nearby grid nodes on the map.</string>
+    <string name="operator_sections">Coming next: scan a prosumer QR code to finish a transfer, and view nearby stations on the map.</string>
+</resources>
