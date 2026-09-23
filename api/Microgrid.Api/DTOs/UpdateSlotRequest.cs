@@ -1,5 +1,6 @@
 /*
  * File: UpdateSlotRequest.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Data received from the client when updating
  *              an existing energy booking slot.

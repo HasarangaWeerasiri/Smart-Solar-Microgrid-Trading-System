@@ -1,5 +1,6 @@
 /*
  * File: UpdateSlotAvailabilityRequest.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Data received from a Grid Operator when updating
  *              the availability of an energy booking slot.

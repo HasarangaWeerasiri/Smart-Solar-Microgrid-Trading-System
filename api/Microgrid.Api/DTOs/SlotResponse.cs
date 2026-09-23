@@ -1,5 +1,6 @@
 /*
  * File: SlotResponse.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Energy booking slot information returned
  *              to web and mobile clients.

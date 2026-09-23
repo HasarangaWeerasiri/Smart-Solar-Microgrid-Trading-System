@@ -1,5 +1,6 @@
 /*
  * File: StationService.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Business rules for solar microgrid stations.
  *              Handles station creation, retrieval, updating,

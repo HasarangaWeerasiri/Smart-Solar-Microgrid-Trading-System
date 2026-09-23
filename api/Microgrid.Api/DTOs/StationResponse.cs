@@ -1,5 +1,6 @@
 /*
  * File: StationResponse.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Solar station information returned to web
  *              and mobile clients.
