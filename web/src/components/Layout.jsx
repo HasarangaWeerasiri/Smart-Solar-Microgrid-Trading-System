@@ -23,7 +23,9 @@ function linksForRole(role) {
       { to: '/backoffice', label: 'Dashboard', end: true },
       { to: '/backoffice/users', label: 'Users' },
       { to: '/backoffice/pending', label: 'Pending activations' },
-      { to: '/backoffice/prosumers', label: 'Prosumers' }
+      { to: '/backoffice/prosumers', label: 'Prosumers' },
+       // IT23218062 - Microgrid Nodes & Slots
+      { to: '/backoffice/stations', label: 'Stations' }
     ]
   }
 
@@ -53,7 +55,7 @@ export default function Layout() {
   const links = linksForRole(user?.role)
 
   return (
-    <div className="flex min-h-full bg-slate-50">
+    <div className="flex h-screen overflow-hidden bg-slate-50">
       {/* Dark background behind the sliding menu on small screens. */}
       {isMenuOpen && (
         <div
@@ -113,7 +115,7 @@ export default function Layout() {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-1 flex-col">
+      <div className="flex min-w-0 flex-1 flex-col overflow-hidden">
         {/* Menu button, only needed when the sidebar is hidden on small screens. */}
         <header className="flex items-center gap-3 border-b border-slate-200 bg-white px-4 py-3 md:hidden">
           <button
@@ -127,7 +129,7 @@ export default function Layout() {
           <span className="text-sm font-semibold text-slate-900">Smart Solar Microgrid</span>
         </header>
 
-        <main className="flex-1 px-4 py-8 sm:px-6 lg:px-8">
+        <main className="flex-1 overflow-y-auto px-4 py-8 sm:px-6 lg:px-8">
           <div className="mx-auto w-full max-w-6xl">
             <Outlet />
           </div>
