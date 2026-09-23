@@ -27,7 +27,7 @@ export default function Modal({ title, description, children, footer, onClose })
   }, [onClose])
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-50 flex items-start justify-center overflow-y-auto p-4 sm:p-6">
       {/* Dark background. Clicking it closes the dialog. */}
       <div
         className="absolute inset-0 bg-slate-900/40"
@@ -38,7 +38,7 @@ export default function Modal({ title, description, children, footer, onClose })
       <div
         role="dialog"
         aria-modal="true"
-        className="relative z-10 w-full max-w-md rounded-xl border border-slate-200 bg-white shadow-lg"
+        className="relative z-10 my-auto w-full max-w-3xl rounded-xl border border-slate-200 bg-white shadow-xl"
       >
         <div className="border-b border-slate-200 px-5 py-4">
           <h2 className="text-base font-semibold text-slate-900">{title}</h2>
