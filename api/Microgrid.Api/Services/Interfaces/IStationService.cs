@@ -1,5 +1,6 @@
 /*
  * File: IStationService.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Defines the service operations used to manage
  *              solar microgrid stations.

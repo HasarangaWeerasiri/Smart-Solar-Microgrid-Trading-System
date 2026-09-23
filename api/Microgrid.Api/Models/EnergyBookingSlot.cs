@@ -1,5 +1,6 @@
 /*
  * File: EnergyBookingSlot.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Document stored in the EnergyBookingSlots collection.
  *              Represents an available energy booking time slot
@@ -16,7 +17,7 @@
  * Status = Deactivated
  * → operator has disabled the slot
  */
- 
+
 using MongoDB.Bson;
 using MongoDB.Bson.Serialization.Attributes;
 

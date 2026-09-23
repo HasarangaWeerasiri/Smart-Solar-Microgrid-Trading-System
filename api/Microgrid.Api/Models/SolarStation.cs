@@ -1,5 +1,6 @@
 /*
  * File: SolarStation.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Document stored in the SolarStationInfo collection.
  *              Represents a solar microgrid station with GPS location,

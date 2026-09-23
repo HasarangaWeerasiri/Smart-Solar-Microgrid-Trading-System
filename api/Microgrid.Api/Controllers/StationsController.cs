@@ -1,5 +1,6 @@
 /*
  * File: StationsController.cs
+ * Author: IT23218062 - Sanjula Mohotti
  * Project: Smart Solar Microgrid Trading System (SE4040)
  * Description: Solar microgrid station management endpoints. Any authenticated user
  *              can view station information. Only Backoffice can create, update,
