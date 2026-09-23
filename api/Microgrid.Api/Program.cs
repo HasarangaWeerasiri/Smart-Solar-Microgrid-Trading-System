@@ -101,6 +101,11 @@ builder.Services.AddScoped<IStaffService, StaffService>();
 builder.Services.AddScoped<IProsumerService, ProsumerService>();
 builder.Services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 
+// Microgrid slot files
+builder.Services.AddScoped<IStationService, StationService>();
+builder.Services.AddScoped<ISlotService, SlotService>();
+
+
 // Check every incoming "Authorization: Bearer <token>" header against our own signing key.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
