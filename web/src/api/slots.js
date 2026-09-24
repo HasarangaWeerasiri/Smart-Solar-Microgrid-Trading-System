@@ -1,6 +1,7 @@
 /*
  * File: slots.js
  * Project: Smart Solar Microgrid Trading System (SE4040)
+ * Author: IT23218062 - Sanjula Mohotti
  * Description: API functions for battery slot management and availability.
  */
 
