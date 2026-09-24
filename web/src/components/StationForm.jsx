@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import StationLocationMap from './StationLocationMap'
 
 const EMPTY_FORM = {
   name: '',
@@ -18,10 +19,10 @@ export default function StationForm({
   error = ''
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM)
+  const [showMap, setShowMap] = useState(false)
 
   const isEditing = Boolean(station)
 
-  // Fill the form when editing an existing station.
   useEffect(() => {
     if (station) {
       setFormData({
@@ -36,6 +37,8 @@ export default function StationForm({
     } else {
       setFormData(EMPTY_FORM)
     }
+
+    setShowMap(false)
   }, [station])
 
   function handleChange(event) {
@@ -44,6 +47,14 @@ export default function StationForm({
     setFormData((current) => ({
       ...current,
       [name]: value
+    }))
+  }
+
+  function handleLocationSelect(latitude, longitude) {
+    setFormData((current) => ({
+      ...current,
+      latitude: latitude.toFixed(6),
+      longitude: longitude.toFixed(6)
     }))
   }
 
@@ -149,16 +160,101 @@ export default function StationForm({
           GPS LOCATION
       ===================================================== */}
       <div>
-        <div className="mb-3">
-          <h3 className="text-sm font-semibold text-slate-800">
-            GPS Location
-          </h3>
 
-          <p className="mt-0.5 text-xs text-slate-500">
-            Enter the latitude and longitude of the solar station.
-          </p>
+        {/* GPS HEADER */}
+        <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+
+          <div>
+            <h3 className="text-sm font-semibold text-slate-800">
+              GPS Location
+            </h3>
+
+            <p className="mt-0.5 text-xs text-slate-500">
+              Enter the coordinates manually or select the station location
+              from the map.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowMap((current) => !current)}
+            disabled={loading}
+            className="inline-flex shrink-0 items-center justify-center gap-2 rounded-lg border border-slate-300 bg-white px-3.5 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {/* MAP PIN ICON */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.8"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              className="h-4 w-4"
+              aria-hidden="true"
+            >
+              <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+              <circle cx="12" cy="10" r="3" />
+            </svg>
+
+            {showMap ? 'Hide Map' : 'Select on Map'}
+          </button>
         </div>
 
+        {/* MAP */}
+        {showMap && (
+          <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3">
+
+            <div className="mb-3 flex items-start gap-2">
+
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                className="mt-0.5 h-4 w-4 shrink-0 text-slate-500"
+                aria-hidden="true"
+              >
+                <circle cx="12" cy="12" r="9" />
+                <path d="M12 11v5" />
+                <path d="M12 8h.01" />
+              </svg>
+
+              <p className="text-xs text-slate-600">
+                Click anywhere on the map to select the station location.
+                You can also drag the marker to adjust the position.
+              </p>
+            </div>
+
+            <StationLocationMap
+              latitude={formData.latitude}
+              longitude={formData.longitude}
+              onLocationSelect={handleLocationSelect}
+            />
+
+            {formData.latitude !== '' &&
+              formData.longitude !== '' && (
+                <div className="mt-3 flex flex-wrap items-center gap-2 text-xs text-slate-600">
+                  <span className="font-medium text-slate-700">
+                    Selected:
+                  </span>
+
+                  <span className="rounded-md bg-white px-2 py-1 ring-1 ring-slate-200">
+                    Lat: {formData.latitude}
+                  </span>
+
+                  <span className="rounded-md bg-white px-2 py-1 ring-1 ring-slate-200">
+                    Lng: {formData.longitude}
+                  </span>
+                </div>
+              )}
+          </div>
+        )}
+
+        {/* LATITUDE + LONGITUDE */}
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
 
           {/* LATITUDE */}
