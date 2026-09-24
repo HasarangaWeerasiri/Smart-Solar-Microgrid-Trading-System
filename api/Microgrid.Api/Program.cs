@@ -105,6 +105,9 @@ builder.Services.AddScoped<IDatabaseSeeder, DatabaseSeeder>();
 builder.Services.AddScoped<IStationService, StationService>();
 builder.Services.AddScoped<ISlotService, SlotService>();
 
+// Energy reservations: the 7 day and 12 hour rules live in this service.
+builder.Services.AddScoped<IReservationService, ReservationService>();
+
 
 // Check every incoming "Authorization: Bearer <token>" header against our own signing key.
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
