@@ -154,7 +154,62 @@ Rules worth knowing:
 
 ---
 
+## Energy reservations — `/api/reservations` (Member C)
+
+Collection: `EnergyReservation`. One reservation books one slot (`EnergyBookingSlots`) at one station
+(`SolarStationInfo`) for one prosumer (`Users`, by NIC). The reservation date/time is the slot's start time.
+
+| Method | Route | Who | Description | Errors |
+| --- | --- | --- | --- | --- |
+| POST | `/api/reservations` | Prosumer (for themselves) or staff (for a prosumer's NIC) | Book a slot. Starts `Pending`. Returns 201. | 400 7-day rule / past slot / bad id / missing NIC, 403 booking for someone else, 404 unknown slot or NIC, 409 slot taken / slot or station not open / prosumer not Active |
+| GET | `/api/reservations?status=&nic=&stationId=` | Any logged-in user | List, latest reservation time first. **A prosumer always gets only their own**, whatever filters they send. | 400 unknown status or bad station id |
+| GET | `/api/reservations/{id}` | Owner or staff | One reservation. | 400, 403 someone else's, 404 |
+| PUT | `/api/reservations/{id}` | Owner or staff | Move to another slot. Goes back to `Pending` and the approval is cleared. | 400 12-hour rule / 7-day rule / same slot, 403, 404, 409 not Pending/Approved or new slot taken |
+| PATCH | `/api/reservations/{id}/cancel` | Owner or staff | Cancel. The slot becomes free again. | 400 12-hour rule, 403, 404, 409 not Pending/Approved |
+| PATCH | `/api/reservations/{id}/approve` | **Backoffice or Grid Operator** | `Pending` → `Approved`. | 403, 404, 409 not Pending or time already passed |
+
+Request bodies:
+
+```json
+// POST /api/reservations   (nic only when staff book for a prosumer)
+{ "slotId": "66f1c0a2e4b0a1b2c3d4e5f6", "nic": "200012345678" }
+
+// PUT /api/reservations/{id}
+{ "slotId": "66f1c0a2e4b0a1b2c3d4e5f7" }
+```
+
+Response (`ReservationResponse`):
+
+```json
+{
+  "id": "66f1c3b9e4b0a1b2c3d4e600",
+  "prosumerNic": "200012345678", "prosumerName": "Sunil Fernando",
+  "stationId": "66f1c0a2e4b0a1b2c3d4e5f0", "stationName": "Kandy Hub",
+  "slotId": "66f1c0a2e4b0a1b2c3d4e5f6", "slotName": "Morning 08:00",
+  "reservationStart": "2026-09-25T02:30:00Z", "reservationEnd": "2026-09-25T03:30:00Z",
+  "status": "Pending",
+  "canModify": true,
+  "createdAt": "2026-09-23T10:00:00Z", "createdBy": "200012345678",
+  "updatedAt": "2026-09-23T10:00:00Z",
+  "approvedAt": null, "approvedBy": null,
+  "cancelledAt": null, "cancelledBy": null,
+  "completedAt": null, "completedBy": null
+}
+```
+
+Rules (all enforced in `ReservationService`, never in a client):
+
+- **7-day rule:** the slot must start in the future and no more than 7 days from now. Checked on create and on the new slot of an update.
+- **12-hour rule:** update and cancel need the current reservation time to be at least 12 hours away. It applies to staff too.
+- **One active booking per slot:** a `Pending` or `Approved` reservation holds its slot. `Cancelled` frees it.
+- The slot must be `Active` and `isAvailable`, its station `Active`, and the prosumer account `Active`.
+- **`canModify`** is worked out by the API (Pending/Approved and at least 12 hours away). Clients use it to show or hide the Edit and Cancel buttons instead of doing the time maths themselves.
+- All times are UTC (`Z`). Clients convert to local time for display.
+- Status life cycle: `Pending` → `Approved` → `Completed` (set by the QR verify step), or `Pending`/`Approved` → `Cancelled`.
+
+---
+
 ## Still to be added by other modules
 
-Microgrid nodes and slots, energy reservations, dashboards and QR verification. Each module owner
-adds their section here in the same format.
+Microgrid nodes and slots, dashboards and QR verification. Each module owner adds their section
+here in the same format.
