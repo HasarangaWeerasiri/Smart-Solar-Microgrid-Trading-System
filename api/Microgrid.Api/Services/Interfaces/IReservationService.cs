@@ -56,4 +56,10 @@ public interface IReservationService
     /// Used to block deactivating a station that still has active bookings.
     /// </summary>
     Task<bool> HasActiveReservationsForStationAsync(string stationId);
+
+    /// <summary>
+    /// True when the slot is held by a Pending or Approved reservation that has not ended yet.
+    /// Used to stop a booked slot's time being changed, or the slot being deactivated.
+    /// </summary>
+    Task<bool> HasActiveReservationsForSlotAsync(string slotId);
 }

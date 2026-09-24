@@ -203,6 +203,9 @@ Rules (all enforced in `ReservationService`, never in a client):
 - **12-hour rule:** update and cancel need the current reservation time to be at least 12 hours away. It applies to staff too.
 - **One active booking per slot:** a `Pending` or `Approved` reservation holds its slot. `Cancelled` frees it.
 - The slot must be `Active` and `isAvailable`, its station `Active`, and the prosumer account `Active`.
+- **A booked slot is protected:** while a slot holds an active reservation, `PUT /api/slots/{id}` cannot change its
+  start or end time, and `PATCH /api/slots/{id}/deactivate` is refused (both 409). Renaming it or changing its
+  availability is still allowed. Likewise a station with active reservations cannot be deactivated (409, rule 7).
 - **`canModify`** is worked out by the API (Pending/Approved and at least 12 hours away). Clients use it to show or hide the Edit and Cancel buttons instead of doing the time maths themselves.
 - All times are UTC (`Z`). Clients convert to local time for display.
 - Status life cycle: `Pending` → `Approved` → `Completed` (set by the QR verify step), or `Pending`/`Approved` → `Cancelled`.
