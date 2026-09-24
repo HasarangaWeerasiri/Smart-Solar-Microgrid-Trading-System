@@ -52,6 +52,11 @@
             android:name=".ui.ProsumerHomeActivity"
             android:exported="false" />
 
+        <!-- Nearby Grid Nodes -->
+        <activity
+            android:name=".ui.NearbyNodesActivity"
+            android:exported="false" />
+            
         <!-- Home screen for a Grid Operator. -->
         <activity
             android:name=".ui.OperatorHomeActivity"

@@ -12,6 +12,7 @@ package lk.sliit.microgrid.data.remote
 
 import android.util.Log
 import org.json.JSONObject
+import org.json.JSONArray
 import java.io.BufferedReader
 import java.net.HttpURLConnection
 import java.net.SocketTimeoutException
@@ -36,7 +37,7 @@ object ApiClient {
      * development machine. A real phone on the same Wi-Fi must use the machine's LAN
      * address instead, for example http://192.168.1.6:5288
      */
-    const val BASE_URL: String = "http://10.0.2.2:5288"
+    const val BASE_URL: String = "http://172.20.10.4:5288"
 
     private const val CONNECT_TIMEOUT_MS = 15000
     private const val READ_TIMEOUT_MS = 15000
@@ -93,6 +94,82 @@ object ApiClient {
                 "Cannot reach the server. Check the API is running and the address is correct.",
                 0
             )
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
+        * Sends a request to an API endpoint that returns a JSON array.
+        *
+        * Example response:
+        * [
+        *   { "id": "...", "name": "Station 1" },
+        *   { "id": "...", "name": "Station 2" }
+        * ]
+        *
+        * Call this on a background thread.
+        */
+    fun requestArray(
+        path: String,
+        method: String = "GET",
+        body: JSONObject? = null,
+        token: String? = null
+    ): JSONArray {
+        val connection = openConnection(path, method, body != null, token)
+
+        try {
+            // Write request body when required.
+            if (body != null) {
+                connection.outputStream.use { output ->
+                    output.write(body.toString().toByteArray(Charsets.UTF_8))
+                }
+            }
+
+            val status = connection.responseCode
+            val text = readBody(connection, status)
+
+            if (status !in 200..299) {
+                throw ApiException(
+                    readErrorMessage(text, status),
+                    status
+                )
+            }
+
+            // Empty successful response.
+            return if (text.isBlank()) {
+                JSONArray()
+            } else {
+                JSONArray(text)
+            }
+
+        } catch (exception: ApiException) {
+            throw exception
+
+        } catch (exception: SocketTimeoutException) {
+            Log.w(
+                TAG,
+                "Timed out calling $method $path",
+                exception
+            )
+
+            throw ApiException(
+                "The server did not respond in time. Check the API is running and reachable.",
+                0
+            )
+
+        } catch (exception: Exception) {
+            Log.w(
+                TAG,
+                "Could not call $method $path",
+                exception
+            )
+
+            throw ApiException(
+                "Cannot reach the server. Check the API is running and the address is correct.",
+                0
+            )
+
         } finally {
             connection.disconnect()
         }
