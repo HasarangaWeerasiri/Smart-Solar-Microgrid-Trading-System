@@ -6,6 +6,8 @@
  * Description: Runs once at startup. Creates a unique index on Email and adds the first
  *              Backoffice user if the Users collection has none, so the team always has
  *              an account to log in with. Existing data is never overwritten.
+ *              Also creates the lookup indexes for the EnergyReservation collection
+ *              (reservations part added by Hasaranga, 2026-09-23).
  */
 
 using Microgrid.Api.Models;
@@ -21,6 +23,7 @@ namespace Microgrid.Api.Services;
 public class DatabaseSeeder : IDatabaseSeeder
 {
     private readonly IMongoCollection<User> _users;
+    private readonly IMongoCollection<EnergyReservation> _reservations;
     private readonly IConfiguration _configuration;
     private readonly ILogger<DatabaseSeeder> _logger;
 
@@ -31,6 +34,7 @@ public class DatabaseSeeder : IDatabaseSeeder
     public DatabaseSeeder(IMongoDatabase database, IConfiguration configuration, ILogger<DatabaseSeeder> logger)
     {
         _users = database.GetCollection<User>("Users");
+        _reservations = database.GetCollection<EnergyReservation>("EnergyReservation");
         _configuration = configuration;
         _logger = logger;
     }
@@ -41,7 +45,31 @@ public class DatabaseSeeder : IDatabaseSeeder
     public async Task SeedAsync()
     {
         await EnsureIndexesAsync();
+        await EnsureReservationIndexesAsync();
         await EnsureBackofficeUserAsync();
+    }
+
+    /// <summary>
+    /// Creates the indexes the reservation queries use: a prosumer's own bookings, the
+    /// "is this slot already taken" check, and the "does this station have active bookings"
+    /// check. Creating an index that already exists does nothing, so this is safe on every start.
+    /// </summary>
+    private async Task EnsureReservationIndexesAsync()
+    {
+        var keys = Builders<EnergyReservation>.IndexKeys;
+
+        await _reservations.Indexes.CreateManyAsync(
+        [
+            new CreateIndexModel<EnergyReservation>(
+                keys.Ascending(r => r.ProsumerNic).Descending(r => r.ReservationStart),
+                new CreateIndexOptions { Name = "prosumer_start" }),
+            new CreateIndexModel<EnergyReservation>(
+                keys.Ascending(r => r.SlotId).Ascending(r => r.Status),
+                new CreateIndexOptions { Name = "slot_status" }),
+            new CreateIndexModel<EnergyReservation>(
+                keys.Ascending(r => r.StationId).Ascending(r => r.Status),
+                new CreateIndexOptions { Name = "station_status" })
+        ]);
     }
 
     /// <summary>
