@@ -20,15 +20,19 @@ public class SlotService : ISlotService
 {
     private readonly IMongoCollection<EnergyBookingSlot> _slots;
     private readonly IMongoCollection<SolarStation> _stations;
+    private readonly IReservationService _reservationService;
 
-    /// Creates the service with the MongoDB database supplied by dependency injection.
-    public SlotService(IMongoDatabase database)
+    /// Creates the service with the MongoDB database and the reservation service supplied
+    /// by dependency injection. The reservation service answers whether a slot is booked.
+    public SlotService(IMongoDatabase database, IReservationService reservationService)
     {
         _slots = database.GetCollection<EnergyBookingSlot>(
             "EnergyBookingSlots");
 
         _stations = database.GetCollection<SolarStation>(
             "SolarStationInfo");
+
+        _reservationService = reservationService;
     }
 
     /// Returns all booking slots belonging to one solar station.
@@ -164,6 +168,19 @@ public class SlotService : ISlotService
                 validationError, 400);
         }
 
+        // A reservation keeps the slot's time it was booked for, so the time of a booked
+        // slot cannot be moved. The name and availability can still be changed.
+        var timeChanged =
+            Math.Abs((request.StartTime.ToUniversalTime() - slot.StartTime).TotalSeconds) >= 1
+            || Math.Abs((request.EndTime.ToUniversalTime() - slot.EndTime).TotalSeconds) >= 1;
+
+        if (timeChanged && await _reservationService.HasActiveReservationsForSlotAsync(id))
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "This slot has an active reservation, so its time cannot be changed. Cancel the reservation first.",
+                409);
+        }
+
         var update = Builders<EnergyBookingSlot>.Update
             .Set(s => s.SlotName, request.SlotName.Trim())
             .Set(s => s.StartTime, request.StartTime)
@@ -246,6 +263,14 @@ public class SlotService : ISlotService
         {
             return ServiceResult<SlotResponse>.Fail(
                 "This booking slot is already deactivated.", 409);
+        }
+
+        // A slot cannot be switched off while a prosumer still holds a booking on it.
+        if (await _reservationService.HasActiveReservationsForSlotAsync(id))
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "This slot has an active reservation. Cancel the reservation before deactivating the slot.",
+                409);
         }
 
         var updatedAt = DateTime.UtcNow;

@@ -305,6 +305,21 @@ public class ReservationService : IReservationService
     }
 
     /// <summary>
+    /// True when the slot is held by a Pending or Approved reservation that has not ended yet.
+    /// A reservation copies its slot's time when booked, so the slot's time must not change
+    /// underneath it, and the slot must not be switched off while someone relies on it.
+    /// </summary>
+    public async Task<bool> HasActiveReservationsForSlotAsync(string slotId)
+    {
+        var now = DateTime.UtcNow;
+        var filter = Builders<EnergyReservation>.Filter.Eq(r => r.SlotId, slotId)
+                     & Builders<EnergyReservation>.Filter.In(r => r.Status, ReservationStatus.Active)
+                     & Builders<EnergyReservation>.Filter.Gt(r => r.ReservationEnd, now);
+
+        return await _reservations.Find(filter).AnyAsync();
+    }
+
+    /// <summary>
     /// Checks every rule a slot must pass before it can be booked: it exists, is active and
     /// available, its station is active, it starts in the future and within 7 days, and no
     /// other active reservation holds it. excludeReservationId skips the booking being moved.

@@ -1,7 +1,7 @@
 /*
  * File: ReservationStatus.cs
  * Project: Smart Solar Microgrid Trading System (SE4040)
- * Author: Hasaranga
+ * Author: IT23245556 Hasaranga Weerasiri
  * Created: 2026-09-23
  * Description: The four states of an energy reservation, kept as constants so the same
  *              spelling is used in the database, in the services and in both clients.

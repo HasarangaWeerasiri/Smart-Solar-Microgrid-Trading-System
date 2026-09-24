@@ -4598,6 +4598,374 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "C-90 Slot guard setup - slot in 2 days (saves resGuardSlotId)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Two days ahead, at a fixed minute so the 'same time' update below matches exactly.",
+									"var start = new Date(Date.now() + 2 * 86400000 + 5 * 3600000);",
+									"start.setUTCSeconds(0, 0);",
+									"var end = new Date(start.getTime() + 3600000);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", end.toISOString());",
+									"// The same slot moved one hour later, used to try changing a booked slot's time.",
+									"pm.collectionVariables.set(\"resSlotMovedStart\", new Date(start.getTime() + 3600000).toISOString());",
+									"pm.collectionVariables.set(\"resSlotMovedEnd\", new Date(end.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resGuardSlotId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-91 Slot guard setup - prosumer books it",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resGuardReservationId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resGuardSlotId}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-92 Move a BOOKED slot's time (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"active reservation\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"active reservation\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"description": "The reservation copied this slot's time when it was booked, so the time cannot move underneath it.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot\",\n    \"startTime\": \"{{resSlotMovedStart}}\",\n    \"endTime\": \"{{resSlotMovedEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-93 Rename a booked slot, same time (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name changed, booking untouched\", function () {",
+									"    pm.expect(pm.response.json().slotName).to.eql(\"Guard slot (renamed)\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot (renamed)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-94 Deactivate a BOOKED slot (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"active reservation\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"active reservation\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-95 Slot guard - prosumer cancels the booking (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resGuardReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resGuardReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-96 Move the slot's time after cancelling (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot (renamed)\",\n    \"startTime\": \"{{resSlotMovedStart}}\",\n    \"endTime\": \"{{resSlotMovedEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-97 Deactivate the slot after cancelling (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
 				}
 			]
 		}
@@ -4760,6 +5128,22 @@
 		},
 		{
 			"key": "resRule7ReservationId",
+			"value": ""
+		},
+		{
+			"key": "resSlotMovedStart",
+			"value": ""
+		},
+		{
+			"key": "resSlotMovedEnd",
+			"value": ""
+		},
+		{
+			"key": "resGuardSlotId",
+			"value": ""
+		},
+		{
+			"key": "resGuardReservationId",
 			"value": ""
 		}
 	]
