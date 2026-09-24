@@ -20,11 +20,14 @@ namespace Microgrid.Api.Services;
 public class StationService : IStationService
 {
     private readonly IMongoCollection<SolarStation> _stations;
+    private readonly IReservationService _reservationService;
 
-    /// Creates the service with the MongoDB database supplied by dependency injection.
-    public StationService(IMongoDatabase database)
+    /// Creates the service with the MongoDB database and the reservation service supplied
+    /// by dependency injection. The reservation service answers whether a station still has active reservations.
+    public StationService(IMongoDatabase database, IReservationService reservationService)
     {
         _stations = database.GetCollection<SolarStation>("SolarStationInfo");
+        _reservationService = reservationService;
     }
 
     /// Returns all solar stations, newest first.
@@ -175,16 +178,14 @@ public class StationService : IStationService
                 "This solar station is already deactivated.", 409);
         }
 
-        /*
-         * IMPORTANT:
-         * The assignment requires deactivation to be blocked when
-         * active reservations exist.
-         *
-         * Add the reservation check here after Member C's actual
-         * Reservation model and collection are available.
-         *
-         * Do not guess the reservation collection or status values.
-         */
+        // Business rule 7: a station cannot be deactivated while it has active
+        // reservations (Pending or Approved bookings that have not ended yet).
+        if (await _reservationService.HasActiveReservationsForStationAsync(id))
+        {
+            return ServiceResult<StationResponse>.Fail(
+                "This station has active reservations. Cancel or complete them before deactivating the station.",
+                409);
+        }
 
         return await ChangeStatusAsync(
             station,
