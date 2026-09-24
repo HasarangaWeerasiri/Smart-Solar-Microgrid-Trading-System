@@ -30,7 +30,11 @@ function linksForRole(role) {
   }
 
   if (role === ROLES.GRID_OPERATOR) {
-    return [{ to: '/operator', label: 'Dashboard', end: true }]
+    return [
+      { to: '/operator', label: 'Dashboard', end: true },
+      // IT23218062 - Microgrid Nodes & Slots
+      { to: '/operator/availability', label: 'Slot Availability'}
+    ]
   }
 
   return []
