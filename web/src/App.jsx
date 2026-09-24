@@ -19,7 +19,8 @@ import PendingActivationsPage from './pages/PendingActivationsPage.jsx'
 import ProsumersPage from './pages/ProsumersPage.jsx'
 import UsersPage from './pages/UsersPage.jsx'
 import { ROLES, homePathForRole } from './roles.js'
-
+import StationsPage from './pages/StationsPage.jsx'
+import SlotsPage from './pages/SlotsPage.jsx'
 /**
  * Sends someone opening "/" to the right home page for their role,
  * or to the login page when nobody is signed in.
@@ -51,6 +52,10 @@ export default function App() {
             <Route path="/backoffice/users" element={<UsersPage />} />
             <Route path="/backoffice/pending" element={<PendingActivationsPage />} />
             <Route path="/backoffice/prosumers" element={<ProsumersPage />} />
+            <Route path="/backoffice/stations" element={<StationsPage />} />
+            <Route path="/backoffice/stations/:stationId/slots" element={<SlotsPage />} />
+            <Route path="/backoffice/stations/:stationId/slots" element={<SlotsPage />} />
+         
           </Route>
         </Route>
 
