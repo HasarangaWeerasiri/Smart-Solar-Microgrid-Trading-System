@@ -24,6 +24,9 @@ import StationsPage from './pages/StationsPage.jsx'
 import SlotsPage from './pages/SlotsPage.jsx'
 import SlotAvailabilityPage from './pages/SlotAvailabilityPage.jsx'
 import HomePage from './pages/HomePage'
+// IT23245556 - Energy Reservations
+import ReservationsPage from './pages/ReservationsPage.jsx'
+import ReservationApprovalsPage from './pages/ReservationApprovalsPage.jsx'
 /**
  * Sends someone opening "/" to the right home page for their role,
  * or to the login page when nobody is signed in.
@@ -59,7 +62,9 @@ export default function App() {
             {/* IT23218062 - Microgrid Nodes & Slots */}
             <Route path="/backoffice/stations" element={<StationsPage />} />
             <Route path="/backoffice/stations/:stationId/slots" element={<SlotsPage />} />
-         
+            {/* IT23245556 - Energy Reservations */}
+            <Route path="/backoffice/reservations" element={<ReservationsPage />} />
+            <Route path="/backoffice/reservations/approvals" element={<ReservationApprovalsPage />} />
           </Route>
         </Route>
 
@@ -70,6 +75,9 @@ export default function App() {
             
             {/* IT23218062 - Microgrid Nodes & Slots */}
             <Route path="/operator/availability" element={<SlotAvailabilityPage />} />
+            {/* IT23245556 - Energy Reservations */}
+            <Route path="/operator/reservations" element={<ReservationsPage />} />
+            <Route path="/operator/reservations/approvals" element={<ReservationApprovalsPage />} />
           </Route>
         </Route>
 

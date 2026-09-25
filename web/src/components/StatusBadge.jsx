@@ -11,7 +11,11 @@
 const STATUS_STYLES = {
   Active: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
   Pending: 'bg-amber-100 text-amber-800 ring-amber-200',
-  Deactivated: 'bg-red-100 text-red-800 ring-red-200'
+  Deactivated: 'bg-red-100 text-red-800 ring-red-200',
+  // IT23245556 - reservation statuses (Pending above is shared with accounts)
+  Approved: 'bg-emerald-100 text-emerald-800 ring-emerald-200',
+  Completed: 'bg-sky-100 text-sky-800 ring-sky-200',
+  Cancelled: 'bg-slate-200 text-slate-700 ring-slate-300'
 }
 
 const DEFAULT_STYLE = 'bg-slate-100 text-slate-700 ring-slate-200'
