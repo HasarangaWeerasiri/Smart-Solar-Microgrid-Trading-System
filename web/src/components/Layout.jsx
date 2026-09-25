@@ -25,7 +25,10 @@ function linksForRole(role) {
       { to: '/backoffice/pending', label: 'Pending activations' },
       { to: '/backoffice/prosumers', label: 'Prosumers' },
        // IT23218062 - Microgrid Nodes & Slots
-      { to: '/backoffice/stations', label: 'Stations' }
+      { to: '/backoffice/stations', label: 'Stations' },
+      // IT23245556 - Energy Reservations
+      { to: '/backoffice/reservations', label: 'Reservations', end: true },
+      { to: '/backoffice/reservations/approvals', label: 'Reservation approvals' }
     ]
   }
 
@@ -33,7 +36,10 @@ function linksForRole(role) {
     return [
       { to: '/operator', label: 'Dashboard', end: true },
       // IT23218062 - Microgrid Nodes & Slots
-      { to: '/operator/availability', label: 'Slot Availability'}
+      { to: '/operator/availability', label: 'Slot Availability'},
+      // IT23245556 - Energy Reservations
+      { to: '/operator/reservations', label: 'Reservations', end: true },
+      { to: '/operator/reservations/approvals', label: 'Reservation approvals' }
     ]
   }
 

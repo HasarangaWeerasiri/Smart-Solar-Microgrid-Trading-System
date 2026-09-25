@@ -21,7 +21,8 @@ const SECTIONS = [
   { title: 'Prosumer management', detail: 'Edit, deactivate and reactivate prosumers.', owner: 'Member A', to: '/backoffice/prosumers' },
   { title: 'Microgrid nodes', detail: 'Register hubs with GPS, capacity and slots.', owner: 'Member B' },
   { title: 'Booking slots', detail: 'Manage the battery slots at each station.', owner: 'Member B' },
-  { title: 'Reservations', detail: 'Create, update and cancel energy bookings.', owner: 'Member C' }
+  { title: 'Reservations', detail: 'Create, update and cancel energy bookings.', owner: 'Member C', to: '/backoffice/reservations' },
+  { title: 'Reservation approvals', detail: 'Approve pending energy bookings.', owner: 'Member C', to: '/backoffice/reservations/approvals' }
 ]
 
 /**
