@@ -73,6 +73,23 @@
         <activity
             android:name=".ui.NearbyNodesMapActivity"
             android:exported="false" />
+
+        <!-- IT23245556 - Energy reservations: book a slot, and the summary after each action. -->
+        <activity
+            android:name=".ui.BookReservationActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.ReservationSummaryActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.MyReservationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.ReservationDetailsActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

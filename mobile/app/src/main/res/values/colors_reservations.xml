@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: colors_reservations.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: IT23245556 Hasaranga Weerasiri
+    Created: 2026-09-25
+    Description: Colours for the reservation status badge, matching the web app's badges.
+-->
+<resources>
+    <color name="status_pending_bg">#FFFEF3C7</color>
+    <color name="status_pending_text">#FF92400E</color>
+    <color name="status_approved_bg">#FFD1FAE5</color>
+    <color name="status_approved_text">#FF065F46</color>
+    <color name="status_completed_bg">#FFE0F2FE</color>
+    <color name="status_completed_text">#FF075985</color>
+    <color name="status_cancelled_bg">#FFE2E8F0</color>
+    <color name="status_cancelled_text">#FF334155</color>
+    <color name="error_text">#FFB91C1C</color>
+    <color name="muted_text">#FF64748B</color>
+</resources>

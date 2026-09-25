@@ -41,6 +41,24 @@
         android:text="@string/prosumer_sections"
         android:textSize="14sp" />
 
+    <!-- IT23245556 - Energy reservations -->
+    <Button
+        android:id="@+id/button_book_slot"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/book_energy_slot"
+        android:textAllCaps="false" />
+
+    <Button
+        android:id="@+id/button_my_bookings"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/my_bookings"
+        android:textAllCaps="false" />
+
     <!-- NEW: Nearby Grid Nodes -->
     <Button
         android:id="@+id/button_nearby_nodes"

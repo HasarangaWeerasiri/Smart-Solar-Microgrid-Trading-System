@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: strings_reservations.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: IT23245556 Hasaranga Weerasiri
+    Created: 2026-09-25
+    Description: Text for the prosumer reservation screens (book, summary). Kept in its own file
+                 so it never clashes with other members' changes to strings.xml.
+-->
+<resources>
+    <!-- Home screen buttons -->
+    <string name="book_energy_slot">Book an energy slot</string>
+    <string name="my_bookings">My bookings</string>
+
+    <!-- My bookings screen -->
+    <string name="my_bookings_title">My bookings</string>
+    <string name="my_bookings_subtitle">Your upcoming bookings. Tap one to see it, change its slot or cancel it.</string>
+    <string name="my_bookings_loading">Loading your bookings…</string>
+    <string name="my_bookings_empty">You have no upcoming bookings.</string>
+    <string name="my_bookings_count">%1$d upcoming booking(s)</string>
+    <string name="refresh">Refresh</string>
+    <string name="locked_under_12_hours">Locked: less than 12 hours to go</string>
+
+    <!-- Booking details screen -->
+    <string name="details_title">Booking details</string>
+    <string name="label_booked_on">Booked on</string>
+    <string name="change_slot">Change slot</string>
+    <string name="cancel_booking">Cancel booking</string>
+    <string name="cancelling">Cancelling…</string>
+    <string name="details_locked_time">Less than 12 hours before this booking starts, so it can no longer be changed or cancelled.</string>
+    <string name="details_locked_status">This booking is %1$s, so it can no longer be changed or cancelled.</string>
+    <string name="cancel_confirm_title">Cancel this booking?</string>
+    <string name="cancel_confirm_message">%1$s at %2$s, %3$s. The slot will be freed for others.</string>
+    <string name="keep_booking">Keep booking</string>
+
+    <!-- Book screen in change mode -->
+    <string name="change_title">Change slot</string>
+    <string name="change_subtitle">Pick a new slot. Your booking goes back to Pending and must be approved again.</string>
+    <string name="current_booking">Current: %1$s, %2$s</string>
+    <string name="save_new_slot">Save new slot</string>
+    <string name="saving">Saving…</string>
+    <string name="view_my_bookings">View my bookings</string>
+
+    <!-- Book screen -->
+    <string name="book_title">Book an energy slot</string>
+    <string name="book_subtitle">Choose a station and one of its open slots. New bookings wait for approval.</string>
+    <string name="label_station">Station</string>
+    <string name="choose_station">Choose a station</string>
+    <string name="loading_stations">Loading stations…</string>
+    <string name="label_date_optional">Date (optional)</string>
+    <string name="any_date">Any date</string>
+    <string name="all_dates">All dates</string>
+    <string name="label_open_slots">Open slots</string>
+    <string name="slots_choose_station_first">Choose a station to see its open slots.</string>
+    <string name="slots_loading">Loading slots…</string>
+    <string name="slots_none_at_station">This station has no open slots right now.</string>
+    <string name="slots_none_on_day">No open slots on this day.</string>
+    <string name="slots_count">%1$d open slot(s). Tap one to choose it.</string>
+    <string name="slot_option">%1$s\n%2$s (%3$s)</string>
+    <string name="book_rule_note">Reservations must be within the next 7 days. The server checks this when you book.</string>
+    <string name="book_this_slot">Book this slot</string>
+    <string name="booking">Booking…</string>
+    <string name="error_choose_slot">Please choose a slot first.</string>
+    <string name="error_request_failed">Something went wrong. Please try again.</string>
+    <string name="error_session_expired">Your session has expired. Please sign in again.</string>
+
+    <!-- Summary screen -->
+    <string name="summary_booked_title">Slot booked</string>
+    <string name="summary_booked_message">Your booking was sent. It stays Pending until a Backoffice officer or Grid Operator approves it. After approval you can show its QR code at the station.</string>
+    <string name="summary_updated_title">Booking changed</string>
+    <string name="summary_updated_message">Your booking moved to the new slot. It is Pending again and must be approved again.</string>
+    <string name="summary_cancelled_title">Booking cancelled</string>
+    <string name="summary_cancelled_message">Your booking was cancelled and the slot is free for others.</string>
+    <string name="summary_can_modify">You can change or cancel this booking until 12 hours before it starts.</string>
+    <string name="summary_cannot_modify">This booking can no longer be changed or cancelled.</string>
+    <string name="label_status">Status</string>
+    <string name="label_slot">Slot</string>
+    <string name="label_date_time">Date and time</string>
+    <string name="label_reservation_id">Reservation ID</string>
+    <string name="label_last_updated">Last updated</string>
+    <string name="book_another_slot">Book another slot</string>
+    <string name="back_to_home">Back to home</string>
+</resources>
