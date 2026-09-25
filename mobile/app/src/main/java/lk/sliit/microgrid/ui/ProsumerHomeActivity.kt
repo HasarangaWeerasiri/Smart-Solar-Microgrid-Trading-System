@@ -44,6 +44,11 @@ class ProsumerHomeActivity : AppCompatActivity() {
         findViewById<TextView>(R.id.text_role).text =
             getString(R.string.role_label, user.role)
 
+        // IT23245556 - Open the energy slot booking screen.
+        findViewById<Button>(R.id.button_book_slot).setOnClickListener {
+            startActivity(Intent(this, BookReservationActivity::class.java))
+        }
+
         // Open Nearby Grid Nodes screen.
         findViewById<Button>(R.id.button_nearby_nodes).setOnClickListener {
             openNearbyNodes()
