@@ -32,6 +32,13 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.Microgrid">
 
+
+        <!-- The Google Maps API key.  -->
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${MAPS_API_KEY}" />
+
+
         <!-- The first screen. It forwards to a home screen when a session is already saved. -->
         <activity
             android:name=".ui.LoginActivity"
@@ -56,12 +63,16 @@
         <activity
             android:name=".ui.NearbyNodesActivity"
             android:exported="false" />
-            
+
         <!-- Home screen for a Grid Operator. -->
         <activity
             android:name=".ui.OperatorHomeActivity"
             android:exported="false" />
 
+        <!-- Map of nearby grid nodes. -->
+        <activity
+            android:name=".ui.NearbyNodesMapActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

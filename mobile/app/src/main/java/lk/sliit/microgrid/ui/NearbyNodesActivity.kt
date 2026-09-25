@@ -40,6 +40,19 @@ class NearbyNodesActivity : AppCompatActivity() {
         textMessage = findViewById(R.id.text_station_message)
         stationContainer = findViewById(R.id.station_container)
 
+        findViewById<Button>(
+        R.id.button_view_map
+        ).setOnClickListener {
+
+            val intent =
+                Intent(
+                this,
+                NearbyNodesMapActivity::class.java
+            )
+
+            startActivity(intent)
+        }
+
         val token = sessionManager.getToken()
 
         // No saved token means the user must log in again.
