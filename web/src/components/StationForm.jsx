@@ -20,6 +20,9 @@ export default function StationForm({
 }) {
   const [formData, setFormData] = useState(EMPTY_FORM)
   const [showMap, setShowMap] = useState(false)
+  const [detectedAddress, setDetectedAddress] = useState('')
+  const [fetchingAddress, setFetchingAddress] = useState(false)
+  const [addressError, setAddressError] = useState('')
 
   const isEditing = Boolean(station)
 
@@ -50,13 +53,58 @@ export default function StationForm({
     }))
   }
 
-  function handleLocationSelect(latitude, longitude) {
+    async function handleLocationSelect(latitude, longitude) {
+    const formattedLatitude = latitude.toFixed(6)
+    const formattedLongitude = longitude.toFixed(6)
+
+    // Immediately update coordinates
     setFormData((current) => ({
-      ...current,
-      latitude: latitude.toFixed(6),
-      longitude: longitude.toFixed(6)
+        ...current,
+        latitude: formattedLatitude,
+        longitude: formattedLongitude
     }))
-  }
+
+    setFetchingAddress(true)
+    setAddressError('')
+    setDetectedAddress('')
+
+    try {
+        const response = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`,
+        {
+            headers: {
+            Accept: 'application/json'
+            }
+        }
+        )
+
+        if (!response.ok) {
+        throw new Error('Could not fetch address')
+        }
+
+        const data = await response.json()
+
+        const address =
+        data.display_name ||
+        'Address not available for this location'
+
+        setDetectedAddress(address)
+
+        // Automatically put detected address into editable Address field
+        setFormData((current) => ({
+         ...current,
+        address: address
+        }))
+    } catch (error) {
+        console.error('Reverse geocoding error:', error)
+
+        setAddressError(
+        'Could not automatically detect the address. Please enter it manually.'
+        )
+    } finally {
+        setFetchingAddress(false)
+    }
+    }
 
   function handleSubmit(event) {
     event.preventDefault()
@@ -234,6 +282,87 @@ export default function StationForm({
               longitude={formData.longitude}
               onLocationSelect={handleLocationSelect}
             />
+
+            {/* DETECTED ADDRESS */}
+            <div className="mt-3">
+
+                {fetchingAddress && (
+                    <div className="flex items-center gap-2 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2.5">
+                        <svg
+                            className="h-4 w-4 animate-spin text-blue-600"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                        >
+                        <circle
+                            cx="12"
+                            cy="12"
+                            r="9"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            className="opacity-25"
+                        />
+
+                        <path
+                            d="M21 12a9 9 0 0 0-9-9"
+                            stroke="currentColor"
+                            strokeWidth="3"
+                            strokeLinecap="round"
+                        />
+                    </svg>
+
+                <span className="text-xs font-medium text-blue-700">
+                    Finding address...
+                </span>
+            </div>
+  )}
+
+  {!fetchingAddress && detectedAddress && (
+    <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-3">
+
+      <div className="flex items-start gap-2">
+
+        {/* Location icon */}
+        <svg
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="1.8"
+          className="mt-0.5 h-4 w-4 shrink-0 text-emerald-700"
+        >
+          <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z" />
+          <circle cx="12" cy="10" r="3" />
+        </svg>
+
+        <div className="min-w-0">
+
+          <p className="text-xs font-semibold text-emerald-800">
+            Detected Address
+          </p>
+
+          <p className="mt-1 text-sm leading-5 text-slate-700">
+            {detectedAddress}
+          </p>
+
+        </div>
+      </div>
+
+      <p className="mt-2 border-t border-emerald-200 pt-2 text-xs text-slate-500">
+        The address was detected from the selected map location.
+        You can edit the Address field above if it is not correct.
+      </p>
+
+    </div>
+  )}
+
+  {addressError && (
+    <div className="rounded-lg border border-amber-200 bg-amber-50 px-3 py-2.5">
+      <p className="text-xs text-amber-800">
+        {addressError}
+      </p>
+    </div>
+  )}
+
+</div>
 
             {formData.latitude !== '' &&
               formData.longitude !== '' && (

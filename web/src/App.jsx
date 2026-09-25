@@ -23,6 +23,7 @@ import { ROLES, homePathForRole } from './roles.js'
 import StationsPage from './pages/StationsPage.jsx'
 import SlotsPage from './pages/SlotsPage.jsx'
 import SlotAvailabilityPage from './pages/SlotAvailabilityPage.jsx'
+import HomePage from './pages/HomePage'
 /**
  * Sends someone opening "/" to the right home page for their role,
  * or to the login page when nobody is signed in.
@@ -45,6 +46,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<HomePage />} />
         <Route path="/login" element={<LoginPage />} />
 
         {/* Backoffice only */}
