@@ -126,7 +126,8 @@ class ReservationSummaryActivity : AppCompatActivity() {
     }
 
     /**
-     * After a booking, offers to book another slot. Every summary offers a way back home.
+     * After a booking, offers to book another slot; after a change or cancellation, offers the
+     * booking list. Every summary offers a way back home.
      */
     private fun setUpButtons(action: String) {
         val primary = findViewById<Button>(R.id.button_primary)
@@ -138,10 +139,21 @@ class ReservationSummaryActivity : AppCompatActivity() {
                 finish()
             }
         } else {
-            primary.visibility = View.GONE
+            primary.setText(R.string.view_my_bookings)
+            primary.setOnClickListener { openMyBookings() }
         }
 
         findViewById<Button>(R.id.button_home).setOnClickListener { goHome() }
+    }
+
+    /**
+     * Opens the booking list, closing the details screens left behind it so the list is fresh.
+     */
+    private fun openMyBookings() {
+        val intent = Intent(this, MyReservationsActivity::class.java)
+        intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        startActivity(intent)
+        finish()
     }
 
     /**

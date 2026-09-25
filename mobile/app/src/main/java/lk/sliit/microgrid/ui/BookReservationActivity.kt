@@ -4,17 +4,20 @@
  * Author: IT23245556 Hasaranga Weerasiri
  * Created: 2026-09-25
  * Description: Booking screen for a solar prosumer. The prosumer picks a station, optionally a
- *              day, then one of the station's open slots, and books it. On success the summary
- *              screen shows the saved booking.
+ *              day, then one of the station's open slots, and books it. The same screen is used
+ *              in "change mode" to move an existing booking to another slot. On success the
+ *              summary screen shows the booking as saved.
  *
- *              Business rules (7 day rule, one booking per slot, active station and slot) are
- *              checked by the API only. The slot list hides closed and past slots to keep it
- *              short, but that is a display filter; the API's message is shown if it refuses.
+ *              Business rules (7 day rule, 12 hour rule on changes, one booking per slot,
+ *              active station and slot) are checked by the API only. The slot list hides
+ *              closed and past slots to keep it short, but that is a display filter; the API's
+ *              message is shown if it refuses.
  */
 
 package lk.sliit.microgrid.ui
 
 import android.app.DatePickerDialog
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.os.Handler
@@ -28,10 +31,10 @@ import android.widget.RadioButton
 import android.widget.RadioGroup
 import android.widget.Spinner
 import android.widget.TextView
-import android.widget.Toast
 import lk.sliit.microgrid.R
 import lk.sliit.microgrid.data.local.SessionManager
 import lk.sliit.microgrid.data.model.EnergySlot
+import lk.sliit.microgrid.data.model.Reservation
 import lk.sliit.microgrid.data.model.Station
 import lk.sliit.microgrid.data.remote.ApiException
 import lk.sliit.microgrid.data.remote.ReservationApi
@@ -42,7 +45,32 @@ import java.util.Calendar
 
 class BookReservationActivity : NetworkPermissionActivity() {
 
-    private lateinit var sessionManager: SessionManager
+    companion object {
+        private const val EXTRA_CHANGE_ID = "lk.sliit.microgrid.extra.CHANGE_RESERVATION_ID"
+        private const val EXTRA_CHANGE_STATION_ID = "lk.sliit.microgrid.extra.CHANGE_STATION_ID"
+        private const val EXTRA_CHANGE_SLOT_ID = "lk.sliit.microgrid.extra.CHANGE_SLOT_ID"
+        private const val EXTRA_CHANGE_LABEL = "lk.sliit.microgrid.extra.CHANGE_LABEL"
+
+        /**
+         * Opens this screen in change mode, to move an existing booking to another slot.
+         * It starts on the booking's station and does not offer its current slot.
+         */
+        fun startForChange(context: Context, reservation: Reservation) {
+            val label = context.getString(
+                R.string.current_booking,
+                reservation.slotName ?: "-",
+                ReservationTime.formatRange(reservation.reservationStart, reservation.reservationEnd)
+            )
+            context.startActivity(
+                Intent(context, BookReservationActivity::class.java)
+                    .putExtra(EXTRA_CHANGE_ID, reservation.id)
+                    .putExtra(EXTRA_CHANGE_STATION_ID, reservation.stationId)
+                    .putExtra(EXTRA_CHANGE_SLOT_ID, reservation.slotId)
+                    .putExtra(EXTRA_CHANGE_LABEL, label)
+            )
+        }
+    }
+
     private lateinit var stationSpinner: Spinner
     private lateinit var pickDateButton: Button
     private lateinit var clearDateButton: Button
@@ -65,17 +93,22 @@ class BookReservationActivity : NetworkPermissionActivity() {
     // Number of the newest slot request, so a slow answer for an old station is ignored.
     private var slotRequest = 0
 
+    // Set only in change mode: the booking being moved, its station and its current slot.
+    private var changeReservationId: String? = null
+    private var changeStationId: String? = null
+    private var changeSlotId: String? = null
+
     /**
-     * Checks the saved session, connects the controls and loads the stations.
+     * Checks the saved session, reads change-mode details if any, connects the controls and
+     * loads the stations.
      */
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_book_reservation)
 
-        sessionManager = SessionManager(this)
-        val savedToken = sessionManager.getToken()
+        val savedToken = SessionManager(this).getToken()
         if (savedToken == null) {
-            returnToLogin()
+            ApiFailure.openLogin(this)
             return
         }
         token = savedToken
@@ -89,12 +122,37 @@ class BookReservationActivity : NetworkPermissionActivity() {
         progressBar = findViewById(R.id.progress_book)
         bookButton = findViewById(R.id.button_book)
 
+        changeReservationId = intent.getStringExtra(EXTRA_CHANGE_ID)
+        changeStationId = intent.getStringExtra(EXTRA_CHANGE_STATION_ID)
+        changeSlotId = intent.getStringExtra(EXTRA_CHANGE_SLOT_ID)
+        if (isChangeMode()) {
+            showChangeModeText(intent.getStringExtra(EXTRA_CHANGE_LABEL))
+        }
+
         pickDateButton.setOnClickListener { showDatePicker() }
         clearDateButton.setOnClickListener { clearDay() }
         bookButton.setOnClickListener { attemptBooking() }
 
         showStationChoices(listOf(getString(R.string.loading_stations)))
         loadStations()
+    }
+
+    /**
+     * True when this screen is moving an existing booking rather than making a new one.
+     */
+    private fun isChangeMode(): Boolean = changeReservationId != null
+
+    /**
+     * Swaps the title, explanation and button text for change mode, and shows the current booking.
+     */
+    private fun showChangeModeText(currentLabel: String?) {
+        findViewById<TextView>(R.id.text_title).setText(R.string.change_title)
+        findViewById<TextView>(R.id.text_subtitle).setText(R.string.change_subtitle)
+        bookButton.setText(R.string.save_new_slot)
+
+        val current = findViewById<TextView>(R.id.text_current_booking)
+        current.text = currentLabel
+        current.visibility = if (currentLabel.isNullOrBlank()) View.GONE else View.VISIBLE
     }
 
     /**
@@ -120,7 +178,8 @@ class BookReservationActivity : NetworkPermissionActivity() {
     }
 
     /**
-     * Fills the station drop-down. The first entry is a prompt, not a station.
+     * Fills the station drop-down. The first entry is a prompt, not a station. In change mode
+     * the booking's own station is selected straight away.
      */
     private fun showStationChoices(labels: List<String>) {
         val adapter = ArrayAdapter(this, android.R.layout.simple_spinner_item, labels)
@@ -148,11 +207,17 @@ class BookReservationActivity : NetworkPermissionActivity() {
              */
             override fun onNothingSelected(parent: AdapterView<*>?) = Unit
         }
+
+        val currentStation = stations.indexOfFirst { it.id == changeStationId }
+        if (currentStation >= 0) {
+            stationSpinner.setSelection(currentStation + 1)
+        }
     }
 
     /**
      * Reads one station's slots on a background thread and keeps the open, upcoming ones,
-     * soonest first. Only the answer to the newest request is shown.
+     * soonest first. In change mode the booking's current slot is left out. Only the answer to
+     * the newest request is shown.
      */
     private fun loadSlots(station: Station) {
         val requestId = ++slotRequest
@@ -165,7 +230,7 @@ class BookReservationActivity : NetworkPermissionActivity() {
                 try {
                     val now = System.currentTimeMillis()
                     val open = SlotApi.getSlotsByStation(station.id, token)
-                        .filter { it.status == "Active" && it.isAvailable }
+                        .filter { it.status == "Active" && it.isAvailable && it.id != changeSlotId }
                         .filter { (ReservationTime.parse(it.startTime)?.time ?: 0L) > now }
                         .sortedBy { ReservationTime.parse(it.startTime)?.time ?: 0L }
 
@@ -259,8 +324,9 @@ class BookReservationActivity : NetworkPermissionActivity() {
     }
 
     /**
-     * Sends the chosen slot to the API. On success the summary screen opens; on failure the
-     * API's own message is shown, for example when the slot was booked by someone else.
+     * Sends the chosen slot to the API: a new booking, or in change mode a move of the existing
+     * one. On success the summary screen opens; on failure the API's own message is shown, for
+     * example when the slot was just taken or the 12 hour rule blocks the change.
      */
     private fun attemptBooking() {
         val chosen = slotGroup.findViewById<RadioButton>(slotGroup.checkedRadioButtonId)
@@ -277,10 +343,21 @@ class BookReservationActivity : NetworkPermissionActivity() {
 
             Thread {
                 try {
-                    val reservation = ReservationApi.create(slotId, token)
+                    val changeId = changeReservationId
+                    val reservation = if (changeId != null) {
+                        ReservationApi.update(changeId, slotId, token)
+                    } else {
+                        ReservationApi.create(slotId, token)
+                    }
+                    val action = if (changeId != null) {
+                        ReservationSummaryActivity.ACTION_UPDATED
+                    } else {
+                        ReservationSummaryActivity.ACTION_BOOKED
+                    }
+
                     mainHandler.post {
                         if (isFinishing || isDestroyed) return@post
-                        ReservationSummaryActivity.start(this, ReservationSummaryActivity.ACTION_BOOKED, reservation)
+                        ReservationSummaryActivity.start(this, action, reservation)
                         finish()
                     }
                 } catch (exception: ApiException) {
@@ -294,18 +371,11 @@ class BookReservationActivity : NetworkPermissionActivity() {
     }
 
     /**
-     * Shows an API failure. An expired or rejected token (401) sends the user back to sign in.
+     * Shows an API failure, or sends the user to sign in when the login has expired.
      */
     private fun handleFailure(exception: ApiException) {
         if (isFinishing || isDestroyed) return
-
-        if (exception.statusCode == 401) {
-            Toast.makeText(this, R.string.error_session_expired, Toast.LENGTH_LONG).show()
-            sessionManager.clear()
-            returnToLogin()
-            return
-        }
-
+        if (ApiFailure.redirectIfSessionExpired(this, exception)) return
         showError(exception.message ?: getString(R.string.error_request_failed))
     }
 
@@ -315,7 +385,14 @@ class BookReservationActivity : NetworkPermissionActivity() {
     private fun showBooking(isBooking: Boolean) {
         progressBar.visibility = if (isBooking) View.VISIBLE else View.GONE
         bookButton.isEnabled = !isBooking
-        bookButton.text = getString(if (isBooking) R.string.booking else R.string.book_this_slot)
+        bookButton.text = getString(
+            when {
+                isBooking && isChangeMode() -> R.string.saving
+                isBooking -> R.string.booking
+                isChangeMode() -> R.string.save_new_slot
+                else -> R.string.book_this_slot
+            }
+        )
     }
 
     /**
@@ -339,15 +416,5 @@ class BookReservationActivity : NetworkPermissionActivity() {
     override fun onLocalNetworkPermissionDenied() {
         showBooking(false)
         showError(getString(R.string.error_local_network_denied))
-    }
-
-    /**
-     * Opens the login screen and clears the screens behind it.
-     */
-    private fun returnToLogin() {
-        val intent = Intent(this, LoginActivity::class.java)
-        intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        startActivity(intent)
-        finish()
     }
 }

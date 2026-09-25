@@ -29,6 +29,41 @@ object ReservationApi {
     }
 
     /**
+     * Lists the logged-in prosumer's own reservations (GET /api/reservations). The API only
+     * ever returns the caller's own bookings, whatever the app asks for.
+     */
+    fun listMine(token: String): List<Reservation> {
+        val array = ApiClient.requestArray("/api/reservations", token = token)
+        return (0 until array.length()).map { index -> parse(array.getJSONObject(index)) }
+    }
+
+    /**
+     * Reads one reservation fresh from the API (GET /api/reservations/{id}), so its status and
+     * canModify flag are up to date.
+     */
+    fun get(id: String, token: String): Reservation {
+        return parse(ApiClient.request("/api/reservations/$id", token = token))
+    }
+
+    /**
+     * Moves a reservation to another slot (PUT /api/reservations/{id}). The API checks the
+     * 12 hour rule on the current slot and the 7 day rule on the new one, and sends the
+     * booking back to Pending.
+     */
+    fun update(id: String, slotId: String, token: String): Reservation {
+        val body = JSONObject().put("slotId", slotId)
+        return parse(ApiClient.request("/api/reservations/$id", method = "PUT", body = body, token = token))
+    }
+
+    /**
+     * Cancels a reservation. The API checks the 12 hour rule. POST is used because Android's
+     * HttpURLConnection cannot send PATCH; the API accepts both on this route.
+     */
+    fun cancel(id: String, token: String): Reservation {
+        return parse(ApiClient.request("/api/reservations/$id/cancel", method = "POST", token = token))
+    }
+
+    /**
      * Turns one reservation JSON object from the API into a Reservation.
      * Also used by the summary screen, which receives the reservation as JSON text.
      */

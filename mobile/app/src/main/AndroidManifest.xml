@@ -82,6 +82,14 @@
         <activity
             android:name=".ui.ReservationSummaryActivity"
             android:exported="false" />
+
+        <activity
+            android:name=".ui.MyReservationsActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.ReservationDetailsActivity"
+            android:exported="false" />
     </application>
 
 </manifest>

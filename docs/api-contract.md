@@ -165,7 +165,7 @@ Collection: `EnergyReservation`. One reservation books one slot (`EnergyBookingS
 | GET | `/api/reservations?status=&nic=&stationId=` | Any logged-in user | List, latest reservation time first. **A prosumer always gets only their own**, whatever filters they send. | 400 unknown status or bad station id |
 | GET | `/api/reservations/{id}` | Owner or staff | One reservation. | 400, 403 someone else's, 404 |
 | PUT | `/api/reservations/{id}` | Owner or staff | Move to another slot. Goes back to `Pending` and the approval is cleared. | 400 12-hour rule / 7-day rule / same slot, 403, 404, 409 not Pending/Approved or new slot taken |
-| PATCH | `/api/reservations/{id}/cancel` | Owner or staff | Cancel. The slot becomes free again. | 400 12-hour rule, 403, 404, 409 not Pending/Approved |
+| PATCH | `/api/reservations/{id}/cancel` | Owner or staff | Cancel. The slot becomes free again. **POST on the same route does the same**, because Android's `HttpURLConnection` cannot send PATCH; the Android app uses POST. | 400 12-hour rule, 403, 404, 409 not Pending/Approved |
 | PATCH | `/api/reservations/{id}/approve` | **Backoffice or Grid Operator** | `Pending` → `Approved`. | 403, 404, 409 not Pending or time already passed |
 
 Request bodies:

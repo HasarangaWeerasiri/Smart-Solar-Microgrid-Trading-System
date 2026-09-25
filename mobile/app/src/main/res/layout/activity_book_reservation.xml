@@ -19,6 +19,7 @@
         android:padding="24dp">
 
         <TextView
+            android:id="@+id/text_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/book_title"
@@ -26,12 +27,26 @@
             android:textStyle="bold" />
 
         <TextView
+            android:id="@+id/text_subtitle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="4dp"
-            android:layout_marginBottom="20dp"
             android:text="@string/book_subtitle"
             android:textSize="14sp" />
+
+        <!-- Only shown when changing an existing booking. -->
+        <TextView
+            android:id="@+id/text_current_booking"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="8dp"
+            android:textSize="14sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="20dp" />
 
         <!-- Station -->
         <TextView

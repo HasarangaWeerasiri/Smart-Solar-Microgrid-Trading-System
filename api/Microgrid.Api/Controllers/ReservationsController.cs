@@ -69,9 +69,11 @@ public class ReservationsController : ApiControllerBase
     }
 
     /// <summary>
-    /// Cancels a reservation (needs 12 hours' notice).
+    /// Cancels a reservation (needs 12 hours' notice). Also answers POST on the same route,
+    /// because Android's built-in HttpURLConnection cannot send PATCH requests.
     /// </summary>
     [HttpPatch("{id}/cancel")]
+    [HttpPost("{id}/cancel")]
     public async Task<IActionResult> Cancel(string id)
     {
         return ToResponse(await _reservationService.CancelAsync(id, CurrentUserId, CurrentUserRole));

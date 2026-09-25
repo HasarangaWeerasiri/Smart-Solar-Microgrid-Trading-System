@@ -8,8 +8,38 @@
                  so it never clashes with other members' changes to strings.xml.
 -->
 <resources>
-    <!-- Home screen button -->
+    <!-- Home screen buttons -->
     <string name="book_energy_slot">Book an energy slot</string>
+    <string name="my_bookings">My bookings</string>
+
+    <!-- My bookings screen -->
+    <string name="my_bookings_title">My bookings</string>
+    <string name="my_bookings_subtitle">Your upcoming bookings. Tap one to see it, change its slot or cancel it.</string>
+    <string name="my_bookings_loading">Loading your bookings…</string>
+    <string name="my_bookings_empty">You have no upcoming bookings.</string>
+    <string name="my_bookings_count">%1$d upcoming booking(s)</string>
+    <string name="refresh">Refresh</string>
+    <string name="locked_under_12_hours">Locked: less than 12 hours to go</string>
+
+    <!-- Booking details screen -->
+    <string name="details_title">Booking details</string>
+    <string name="label_booked_on">Booked on</string>
+    <string name="change_slot">Change slot</string>
+    <string name="cancel_booking">Cancel booking</string>
+    <string name="cancelling">Cancelling…</string>
+    <string name="details_locked_time">Less than 12 hours before this booking starts, so it can no longer be changed or cancelled.</string>
+    <string name="details_locked_status">This booking is %1$s, so it can no longer be changed or cancelled.</string>
+    <string name="cancel_confirm_title">Cancel this booking?</string>
+    <string name="cancel_confirm_message">%1$s at %2$s, %3$s. The slot will be freed for others.</string>
+    <string name="keep_booking">Keep booking</string>
+
+    <!-- Book screen in change mode -->
+    <string name="change_title">Change slot</string>
+    <string name="change_subtitle">Pick a new slot. Your booking goes back to Pending and must be approved again.</string>
+    <string name="current_booking">Current: %1$s, %2$s</string>
+    <string name="save_new_slot">Save new slot</string>
+    <string name="saving">Saving…</string>
+    <string name="view_my_bookings">View my bookings</string>
 
     <!-- Book screen -->
     <string name="book_title">Book an energy slot</string>
