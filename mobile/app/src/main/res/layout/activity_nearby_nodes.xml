@@ -25,6 +25,18 @@
         android:textColor="#64748B"
         android:textSize="14sp" />
 
+    <Button
+        android:id="@+id/button_view_map"
+        android:layout_width="match_parent"
+        android:layout_height="52dp"
+        android:layout_marginTop="16dp"
+        android:backgroundTint="#FBBF24"
+        android:text="View Stations on Map"
+        android:textAllCaps="false"
+        android:textColor="#0F172A"
+        android:textSize="15sp"
+        android:textStyle="bold" />
+        
     <ProgressBar
         android:id="@+id/progress_stations"
         android:layout_width="wrap_content"
