@@ -12,7 +12,7 @@ using Microgrid.Api.Models;
 using Microgrid.Api.Services.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Driver;
-
+using System.Globalization;
 namespace Microgrid.Api.Services;
 
 /// Manages energy booking slots stored in the EnergyBookingSlots collection.
@@ -120,6 +120,29 @@ public class SlotService : ISlotService
                 validationError, 400);
         }
 
+        var operatingHoursError =       ValidateSlotOperatingHours(
+            station,
+            request.StartTime,
+            request.EndTime);
+
+        if (operatingHoursError is not null)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+            operatingHoursError, 400);
+        }
+
+        var hasOverlap = await HasOverlappingSlotAsync(
+            stationId,
+            request.StartTime,
+            request.EndTime);
+
+        if (hasOverlap)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "The booking slot overlaps with another active slot at this station.",
+                409);
+        }
+
         var slot = new EnergyBookingSlot
         {
             StationId = stationId,
@@ -166,6 +189,39 @@ public class SlotService : ISlotService
         {
             return ServiceResult<SlotResponse>.Fail(
                 validationError, 400);
+        }
+
+        var station = await FindStationAsync    (slot.StationId);
+
+        if (station is null)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "The solar station belonging to this slot no longer exists.",
+                409);
+        }
+
+        var operatingHoursError = ValidateSlotOperatingHours(
+            station,
+            request.StartTime,
+            request.EndTime);
+
+        if (operatingHoursError is not null)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                operatingHoursError, 400);
+        }
+
+        var hasOverlap = await HasOverlappingSlotAsync(
+            slot.StationId,
+            request.StartTime,
+            request.EndTime,
+            slot.Id);
+
+        if (hasOverlap)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "The booking slot overlaps with another active slot at this station.",
+                409);
         }
 
         // A reservation keeps the slot's time it was booked for, so the time of a booked
@@ -332,6 +388,19 @@ public class SlotService : ISlotService
                 409);
         }
 
+        var hasOverlap = await HasOverlappingSlotAsync(
+            slot.StationId,
+            slot.StartTime,
+            slot.EndTime,
+            slot.Id);
+
+        if (hasOverlap)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "This slot cannot be activated because its time overlaps with another active slot at this station.",
+                409);
+        }
+
         var updatedAt = DateTime.UtcNow;
 
         var update = Builders<EnergyBookingSlot>.Update
@@ -382,5 +451,100 @@ public class SlotService : ISlotService
         }
 
         return null;
+    }
+
+    
+    /// Validates that the booking slot falls within the station's daily operating hours.
+    private static string? ValidateSlotOperatingHours(
+        SolarStation station,
+        DateTime startTime,
+        DateTime endTime)
+    {
+        // Convert the station's stored "HH:mm" strings into TimeSpan values.
+        if (!TimeSpan.TryParseExact(
+                station.OperatingStartTime,
+                @"hh\:mm",
+                CultureInfo.InvariantCulture,
+                out var operatingStart))
+        {
+            return "The station operating start time is invalid.";
+        }
+
+        if (!TimeSpan.TryParseExact(
+                station.OperatingEndTime,
+                @"hh\:mm",
+                CultureInfo.InvariantCulture,
+                out var operatingEnd))
+        {
+            return "The station operating end time is invalid.";
+        }
+
+        // This implementation assumes the station operates within one calendar day.
+        if (operatingStart >= operatingEnd)
+        {
+            return "The station operating hours are invalid.";
+        }
+
+        // A booking slot must start and finish on the same date.
+        if (startTime.Date != endTime.Date)
+        {
+            return "A booking slot must start and end on the same date.";
+        }
+    
+
+        var slotStart = startTime.TimeOfDay;
+        var slotEnd = endTime.TimeOfDay;
+
+        // The complete slot must be inside the station's operating hours.
+        if (slotStart < operatingStart || slotEnd > operatingEnd)
+        {
+            return $"Booking slot must be within the station operating hours " +
+               $"{station.OperatingStartTime} to {station.OperatingEndTime}.";
+        }
+
+        return null;
+    }
+
+    /// Checks whether the requested time overlaps another active slot
+    /// belonging to the same solar station.
+    ///
+    /// When updating a slot, excludeSlotId is used so that the slot
+    /// does not conflict with itself.
+    private async Task<bool> HasOverlappingSlotAsync(
+        string stationId,
+        DateTime startTime,
+        DateTime endTime,
+        string? excludeSlotId = null)
+    {
+        var filter = Builders<EnergyBookingSlot>.Filter.And(
+            Builders<EnergyBookingSlot>.Filter.Eq(
+                s => s.StationId,
+                stationId),
+
+            Builders<EnergyBookingSlot>.Filter.Eq(
+                s => s.Status,
+                SlotStatus.Active),
+            Builders<EnergyBookingSlot>.Filter.Lt(
+                s => s.StartTime,
+                endTime),
+
+            Builders<EnergyBookingSlot>.Filter.Gt(
+                s => s.EndTime,
+                startTime)
+        );
+
+        // During update, ignore the slot that is currently being edited.
+        if (!string.IsNullOrWhiteSpace(excludeSlotId))
+        {
+            filter = Builders<EnergyBookingSlot>.Filter.And(
+                filter,
+                Builders<EnergyBookingSlot>.Filter.Ne(
+                    s => s.Id,
+                    excludeSlotId));
+        }
+
+        return await _slots
+            .Find(filter)
+            .AnyAsync();
     }
 }
