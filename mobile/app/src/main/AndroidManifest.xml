@@ -7,6 +7,7 @@
     Description: Declares the app's permissions and screens. The INTERNET permission is
                  needed because every piece of data comes from the Web API, and the network
                  security config allows plain HTTP to the development server only.
+                 (CAMERA permission and the two QR screens added by Member D, 2026-09-28.)
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -20,6 +21,11 @@
         This is a runtime permission, so LoginActivity also asks for it before the first call.
     -->
     <uses-permission android:name="android.permission.ACCESS_LOCAL_NETWORK" />
+
+    <!-- Needed by the operator's QR scanner screen. Requested at runtime, not just declared. -->
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+    <uses-feature android:name="android.hardware.camera.autofocus" android:required="false" />
 
     <application
         android:allowBackup="true"
@@ -89,6 +95,15 @@
 
         <activity
             android:name=".ui.ReservationDetailsActivity"
+            android:exported="false" />
+
+        <!-- Member D - QR flow -->
+        <activity
+            android:name=".ui.ReservationQrActivity"
+            android:exported="false" />
+
+        <activity
+            android:name=".ui.QrScannerActivity"
             android:exported="false" />
     </application>
 

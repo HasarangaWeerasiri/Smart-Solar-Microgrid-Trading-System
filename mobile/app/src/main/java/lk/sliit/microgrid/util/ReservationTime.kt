@@ -9,6 +9,8 @@
  *
  *              SimpleDateFormat is used instead of java.time because the app supports Android 7
  *              (API 24), where java.time is not available.
+ *              (formatExpiry added by Member D, 2026-09-28, for the QR code screen's
+ *              "Valid until ..." line.)
  */
 
 package lk.sliit.microgrid.util
@@ -95,6 +97,14 @@ object ReservationTime {
      */
     fun formatDay(date: Date): String {
         return SimpleDateFormat("EEE, d MMM", Locale.getDefault()).format(date)
+    }
+
+    /**
+     * Shows a QR token's expiry in local time, for example "3:42 PM, 29 Sep".
+     */
+    fun formatExpiry(value: String?): String {
+        val date = parse(value) ?: return "-"
+        return SimpleDateFormat("h:mm a, d MMM", Locale.getDefault()).format(date)
     }
 
     /**

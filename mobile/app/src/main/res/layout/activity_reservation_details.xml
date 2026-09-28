@@ -7,6 +7,8 @@
     Description: One booking's details, read fresh from the API, with the Change slot and Cancel
                  booking buttons. The buttons are always shown, but greyed out and not pressable
                  unless the API says the booking can be modified.
+                 (button_show_qr added by Member D, 2026-09-28: only visible for an Approved
+                 booking.)
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -156,6 +158,16 @@
                 android:layout_marginTop="16dp"
                 android:textColor="@color/muted_text"
                 android:textSize="13sp"
+                android:visibility="gone" />
+
+            <!-- Member D - only visible for an Approved booking; see showReservation(). -->
+            <Button
+                android:id="@+id/button_show_qr"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/show_qr_code"
+                android:textAllCaps="false"
                 android:visibility="gone" />
 
             <Button

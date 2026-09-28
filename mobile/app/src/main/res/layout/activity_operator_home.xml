@@ -6,6 +6,7 @@
     Created: 2026-09-22
     Description: Home screen layout for a Grid Operator. Shows who is signed in and a
                  logout button. The QR scanner and map are added here later.
+                 (button_scan_qr added by Member D, 2026-09-28.)
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -33,6 +34,15 @@
         android:layout_marginTop="24dp"
         android:text="@string/operator_sections"
         android:textSize="14sp" />
+
+    <!-- Member D - QR flow -->
+    <Button
+        android:id="@+id/button_scan_qr"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/scan_qr_code"
+        android:textAllCaps="false" />
 
     <View
         android:layout_width="match_parent"
