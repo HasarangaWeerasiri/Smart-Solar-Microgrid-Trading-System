@@ -7,6 +7,7 @@
     Description: Declares the app's permissions and screens. The INTERNET permission is
                  needed because every piece of data comes from the Web API, and the network
                  security config allows plain HTTP to the development server only.
+                 (ProsumerDashboardActivity added by Member D, 2026-09-28.)
 -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
@@ -89,6 +90,11 @@
 
         <activity
             android:name=".ui.ReservationDetailsActivity"
+            android:exported="false" />
+
+        <!-- Member D - Prosumer dashboard: summary tiles, current/history tabs, search and date filter. -->
+        <activity
+            android:name=".ui.ProsumerDashboardActivity"
             android:exported="false" />
     </application>
 
