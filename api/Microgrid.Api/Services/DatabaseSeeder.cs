@@ -8,6 +8,8 @@
  *              an account to log in with. Existing data is never overwritten.
  *              Also creates the lookup indexes for the EnergyReservation collection
  *              (reservations part added by Hasaranga, 2026-09-23).
+ *              (status_end and reservation_start indexes added by Member D, 2026-09-28, to
+ *              support GET /api/reservations' scope and from/to date range filters.)
  */
 
 using Microgrid.Api.Models;
@@ -51,8 +53,10 @@ public class DatabaseSeeder : IDatabaseSeeder
 
     /// <summary>
     /// Creates the indexes the reservation queries use: a prosumer's own bookings, the
-    /// "is this slot already taken" check, and the "does this station have active bookings"
-    /// check. Creating an index that already exists does nothing, so this is safe on every start.
+    /// "is this slot already taken" check, the "does this station have active bookings"
+    /// check, the dashboard's scope filter (current/history), and the from/to date range and
+    /// default sort on GET /api/reservations. Creating an index that already exists does
+    /// nothing, so this is safe on every start.
     /// </summary>
     private async Task EnsureReservationIndexesAsync()
     {
@@ -68,7 +72,17 @@ public class DatabaseSeeder : IDatabaseSeeder
                 new CreateIndexOptions { Name = "slot_status" }),
             new CreateIndexModel<EnergyReservation>(
                 keys.Ascending(r => r.StationId).Ascending(r => r.Status),
-                new CreateIndexOptions { Name = "station_status" })
+                new CreateIndexOptions { Name = "station_status" }),
+            // Supports the scope=current / scope=history filter, which checks the status
+            // together with whether the slot's end time has passed.
+            new CreateIndexModel<EnergyReservation>(
+                keys.Ascending(r => r.Status).Ascending(r => r.ReservationEnd),
+                new CreateIndexOptions { Name = "status_end" }),
+            // Supports the from/to date range filter and the default "latest first" sort when
+            // no other filter narrows the query enough to use one of the indexes above.
+            new CreateIndexModel<EnergyReservation>(
+                keys.Descending(r => r.ReservationStart),
+                new CreateIndexOptions { Name = "reservation_start" })
         ]);
     }
 

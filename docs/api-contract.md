@@ -162,11 +162,52 @@ Collection: `EnergyReservation`. One reservation books one slot (`EnergyBookingS
 | Method | Route | Who | Description | Errors |
 | --- | --- | --- | --- | --- |
 | POST | `/api/reservations` | Prosumer (for themselves) or staff (for a prosumer's NIC) | Book a slot. Starts `Pending`. Returns 201. | 400 7-day rule / past slot / bad id / missing NIC, 403 booking for someone else, 404 unknown slot or NIC, 409 slot taken / slot or station not open / prosumer not Active |
-| GET | `/api/reservations?status=&nic=&stationId=` | Any logged-in user | List, latest reservation time first. **A prosumer always gets only their own**, whatever filters they send. | 400 unknown status or bad station id |
+| GET | `/api/reservations?...` | Any logged-in user | List, paged, latest reservation time first. **A prosumer always gets only their own**, whatever filters they send. See "Listing, searching and paging" below. | 400 unknown status / scope / bad station id / bad date |
 | GET | `/api/reservations/{id}` | Owner or staff | One reservation. | 400, 403 someone else's, 404 |
 | PUT | `/api/reservations/{id}` | Owner or staff | Move to another slot. Goes back to `Pending` and the approval is cleared. | 400 12-hour rule / 7-day rule / same slot, 403, 404, 409 not Pending/Approved or new slot taken |
 | PATCH | `/api/reservations/{id}/cancel` | Owner or staff | Cancel. The slot becomes free again. **POST on the same route does the same**, because Android's `HttpURLConnection` cannot send PATCH; the Android app uses POST. | 400 12-hour rule, 403, 404, 409 not Pending/Approved |
 | PATCH | `/api/reservations/{id}/approve` | **Backoffice or Grid Operator** | `Pending` → `Approved`. | 403, 404, 409 not Pending or time already passed |
+
+### Listing, searching and paging (`GET /api/reservations`)
+
+Query parameters, all optional and all combinable (AND'd together, except `scope`'s two
+options which are internally an OR of status and time):
+
+| Param | Meaning |
+| --- | --- |
+| `status` | One of `Pending`, `Approved`, `Completed`, `Cancelled`. |
+| `nic` | Exact NIC. Ignored for a prosumer caller - see below. |
+| `stationId` | Exact station id. |
+| `from`, `to` | ISO 8601 dates. Filters on the reservation's slot **start** time (`reservationStart`), inclusive. |
+| `scope` | `current` (Pending/Approved AND the slot hasn't ended) \| `history` (Completed/Cancelled, OR the slot already ended) \| `all` (default). |
+| `search` | Free text, case-insensitive. Matches the prosumer's NIC, the prosumer's full name, or the station's name. |
+| `page` | 1-based. Default 1. |
+| `pageSize` | Default 50, capped at 200. |
+
+Example: `GET /api/reservations?scope=current&search=kandy&page=1&pageSize=20`
+
+Response **headers** (in addition to the usual `ReservationResponse[]` body):
+
+| Header | Meaning |
+| --- | --- |
+| `X-Total-Count` | Total rows matching the filters, before paging. |
+| `X-Page` | The page actually served, after clamping. |
+| `X-Page-Size` | The page size actually served, after clamping. |
+
+**Why headers instead of `{ items, totalCount }` in the body:** every existing caller -
+the web app's `listReservations`, the Android app's `ReservationApi.listMine`, and the whole
+`C - Energy reservations` Postman suite - already parses this endpoint's body as a plain JSON
+array. Changing the body to a wrapper object would break every one of them the moment this
+shipped. Headers add the paging metadata without changing what the body *is*, so nothing that
+already calls this endpoint needs to change, while the dashboard can still read the total
+without a second request.
+
+All filtering, searching and paging happen in MongoDB (`Find`/`CountDocuments` with a
+`FilterDefinition`, never a C#-side `.Where()` over a loaded list). `search` needs the
+prosumer's name and the station's name, neither of which is stored on the reservation itself,
+so it runs two small, targeted lookups first (matching NICs from `Users`, matching station ids
+from `SolarStationInfo`) and folds their ids into the same `Find` filter - it never loads every
+reservation to filter in memory.
 
 Request bodies:
 
@@ -212,7 +253,82 @@ Rules (all enforced in `ReservationService`, never in a client):
 
 ---
 
+## Reservations — Dashboard & QR — `/api/reservations` (Member D)
+
+Four more routes on the same reservations controller: dashboard counts, marking a transfer
+finished, and issuing/verifying the transaction QR code (business rule 8).
+
+| Method | Route | Who | Description | Errors |
+| --- | --- | --- | --- | --- |
+| GET | `/api/reservations/summary` | Any logged-in user | Reservation counts by status. A prosumer gets counts for their own bookings only; staff get system-wide counts. | 401 no token |
+| PATCH | `/api/reservations/{id}/complete` | **Backoffice or Grid Operator** | `Approved` → `Completed`, once the QR code has been verified and the transfer is finished. **POST on the same route does the same**, because Android's `HttpURLConnection` cannot send PATCH. | 400 bad id, 403, 404, 409 not Approved |
+| GET | `/api/reservations/{id}/qr` | Owner, or staff | Issues a signed, 24-hour QR token for an Approved reservation. The client draws the QR code itself; the API never renders an image. | 400 bad id, 403 someone else's, 404, 409 not Approved |
+| POST | `/api/reservations/verify-qr` | **Backoffice or Grid Operator** | Verifies a token scanned from a prosumer's QR code and returns the booking. **Read-only** — never changes the reservation's status. | 400 malformed token, 401 bad signature, 403, 404 no such reservation, 410 expired, 409 not Approved |
+
+Response (`GET /api/reservations/summary`):
+
+```json
+{
+  "pending": 3,
+  "approved": 2,
+  "completed": 5,
+  "cancelled": 1,
+  "approvedUpcoming": 2
+}
+```
+
+`approvedUpcoming` is `Approved` reservations whose slot still starts in the future — the marking
+scheme asks for this count on its own, separate from the total `Approved` count.
+
+Request/response bodies:
+
+```json
+// GET /api/reservations/{id}/qr  ->  200
+{
+  "token": "eyJyZXNlcnZhdGlvbklkIjoi...(base64url payload).(base64url signature)",
+  "reservationId": "66f1c3b9e4b0a1b2c3d4e600",
+  "expiresAt": "2026-09-29T10:15:00Z"
+}
+
+// POST /api/reservations/verify-qr
+{ "token": "..." }
+
+// POST /api/reservations/verify-qr  ->  200
+{
+  "reservationId": "66f1c3b9e4b0a1b2c3d4e600",
+  "prosumerNic": "200012345678",
+  "prosumerFullName": "Sunil Fernando",
+  "stationName": "Kandy Hub",
+  "slotName": "Morning 08:00",
+  "startTime": "2026-09-29T02:30:00Z",
+  "endTime": "2026-09-29T03:30:00Z",
+  "status": "Approved"
+}
+```
+
+QR token design (stateless — no new collection):
+
+- Payload: `reservationId|prosumerNic|issuedAtUnix|expiresAtUnix`.
+- Signature: HMAC-SHA256 over the payload, using the same signing key as login JWTs (`Jwt:Key`
+  in configuration). Verifying needs no database lookup beyond the reservation itself.
+- Token: `base64url(payload) + "." + base64url(signature)`.
+- Expiry: 24 hours after it was issued. An expired token is rejected (`410`) even if its
+  signature is valid.
+
+Rules (all enforced in `ReservationService`, never in a client):
+
+- **A QR code is only available for an Approved reservation** (rule 8). Requesting one for a
+  Pending, Completed or Cancelled reservation is `409`.
+- **Verifying a QR code never changes anything.** Staff can re-scan the same code as many times
+  as needed; only `PATCH /api/reservations/{id}/complete` moves the reservation to `Completed`.
+- `verify-qr` checks the token in a fixed order, each with its own status code: malformed shape
+  (`400`) → bad signature (`401`) → expired (`410`) → reservation not found (`404`) → reservation
+  not Approved any more (`409`, message includes the actual current status).
+- Only an **Approved** reservation can be completed; `Pending`, `Cancelled` or an already
+  `Completed` reservation is `409`.
+
+---
+
 ## Still to be added by other modules
 
-Microgrid nodes and slots, dashboards and QR verification. Each module owner adds their section
-here in the same format.
+Microgrid nodes and slots. Each module owner adds their section here in the same format.
