@@ -6,6 +6,7 @@
     Created: 2026-09-22
     Description: Home screen layout for a solar prosumer. Shows who is signed in, read from
                  the local SQLite session, and a logout button.
+                 (button_dashboard added by Member D, 2026-09-28.)
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
@@ -57,6 +58,16 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
         android:text="@string/my_bookings"
+        android:textAllCaps="false" />
+
+    <!-- Member D - Dashboard: summary tiles, current/history tabs, search and date filter. -->
+    <Button
+        android:id="@+id/button_dashboard"
+        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/dashboard"
         android:textAllCaps="false" />
 
     <!-- NEW: Nearby Grid Nodes -->

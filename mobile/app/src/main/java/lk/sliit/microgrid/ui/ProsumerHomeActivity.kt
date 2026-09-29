@@ -4,6 +4,7 @@
  * Author: Lakshan
  * Created: 2026-09-22
  * Description: Home screen for a solar prosumer.
+ *              (button_dashboard wired by Member D, 2026-09-28, to open ProsumerDashboardActivity.)
  */
 
 package lk.sliit.microgrid.ui
@@ -50,6 +51,11 @@ class ProsumerHomeActivity : AppCompatActivity() {
         }
         findViewById<Button>(R.id.button_my_bookings).setOnClickListener {
             startActivity(Intent(this, MyReservationsActivity::class.java))
+        }
+
+        // Member D - Dashboard: summary tiles, current/history tabs, search and date filter.
+        findViewById<Button>(R.id.button_dashboard).setOnClickListener {
+            startActivity(Intent(this, ProsumerDashboardActivity::class.java))
         }
 
         // Open Nearby Grid Nodes screen.

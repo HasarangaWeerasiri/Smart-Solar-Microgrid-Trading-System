@@ -43,18 +43,25 @@ they use the web application.
 
 ## The API address
 
-`ApiClient.BASE_URL` in `app/src/main/java/lk/sliit/microgrid/data/remote/ApiClient.kt` is
-the **only** place the server address appears.
+`ApiClient.BASE_URL` reads `BuildConfig.API_BASE_URL`, which Gradle fills in from a single
+line in the git-ignored `mobile/local.properties` (the same file `MAPS_API_KEY` already lives
+in). Nothing in the Kotlin or Java source ever needs editing to repoint the app.
+
+```properties
+# mobile/local.properties (created automatically, git-ignored)
+API_BASE_URL=http://192.168.1.6:5288
+```
 
 | Where the app runs | Address to use |
 | --- | --- |
-| Android emulator | `http://10.0.2.2:5288` (default - the emulator's alias for this machine) |
+| Android emulator | `http://10.0.2.2:5288` (default when `API_BASE_URL` is not set at all) |
 | Real phone on the same Wi-Fi | `http://<your-machine-ip>:5288`, for example `http://192.168.1.6:5288` |
 | Published on IIS | The IIS address |
 
-If you change it to a new address, add that address to
+If you set it to a new address, add that address to
 `app/src/main/res/xml/network_security_config.xml` too, otherwise Android blocks the
-plain HTTP call.
+plain HTTP call. After editing `local.properties`, re-sync Gradle (or just rebuild) so the
+new `BuildConfig.API_BASE_URL` takes effect.
 
 ## Folder guide
 

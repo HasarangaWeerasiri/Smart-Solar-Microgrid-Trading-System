@@ -31,6 +31,20 @@ android {
 
         manifestPlaceholders["MAPS_API_KEY"] =
             localProperties.getProperty("MAPS_API_KEY", "")
+
+        // The Web API's address, built into BuildConfig.API_BASE_URL (see ApiClient.kt).
+        // Override it per machine by adding a line to the git-ignored mobile/local.properties,
+        // for example: API_BASE_URL=http://192.168.1.6:5288
+        // Falls back to the Android emulator's alias for this machine when nothing is set.
+        buildConfigField(
+            "String",
+            "API_BASE_URL",
+            "\"${localProperties.getProperty("API_BASE_URL", "http://10.0.2.2:5288")}\""
+        )
+    }
+
+    buildFeatures {
+        buildConfig = true
     }
 
     buildTypes {
@@ -50,10 +64,12 @@ dependencies {
     implementation(libs.androidx.appcompat)
     implementation(libs.androidx.core.ktx)
     implementation(libs.material)
+    implementation(libs.androidx.recyclerview)
+    implementation(libs.androidx.swiperefreshlayout)
     implementation("com.google.android.gms:play-services-maps:19.2.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(libs.androidx.junit)
-    
+
 }

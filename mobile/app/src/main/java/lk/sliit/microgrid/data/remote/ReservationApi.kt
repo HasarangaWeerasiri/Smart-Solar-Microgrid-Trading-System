@@ -6,12 +6,23 @@
  * Description: Calls for the energy reservation endpoints of the Web API. These only send and
  *              receive data. The 7 day rule, the 12 hour rule, double booking and "own bookings
  *              only" are all decided by the API; its message is shown to the user as it is.
+ *              (getSummary and list added by Member D, 2026-09-28, for the prosumer dashboard.
+ *              Both only ever return the caller's own bookings - the API scopes a Prosumer
+ *              token to its own NIC server-side, so neither sends a nic parameter.)
  */
 
 package lk.sliit.microgrid.data.remote
 
 import lk.sliit.microgrid.data.model.Reservation
+import lk.sliit.microgrid.data.model.ReservationSummary
 import org.json.JSONObject
+import java.net.URLEncoder
+
+/**
+ * One page of reservations plus the total number of rows matching the filters, before paging -
+ * read from the X-Total-Count response header.
+ */
+data class ReservationPage(val items: List<Reservation>, val totalCount: Int)
 
 /**
  * Reservation calls used by the prosumer booking screens.
@@ -36,6 +47,55 @@ object ReservationApi {
         val array = ApiClient.requestArray("/api/reservations", token = token)
         return (0 until array.length()).map { index -> parse(array.getJSONObject(index)) }
     }
+
+    /**
+     * Lists the logged-in prosumer's own reservations, paged and filtered by the dashboard:
+     * scope ("current" | "history"), a free-text search (NIC, name or station - all pointless
+     * for a prosumer's own NIC, but station name search is still useful) and a from/to date
+     * range on the slot start time. Every filter is sent to the API as a query parameter and
+     * applied there; nothing is filtered on the device. nic is never sent - the API already
+     * scopes a Prosumer token to its own bookings, whatever is asked for.
+     */
+    fun list(
+        token: String,
+        scope: String? = null,
+        search: String? = null,
+        from: String? = null,
+        to: String? = null,
+        page: Int = 1,
+        pageSize: Int = 50
+    ): ReservationPage {
+        val query = StringBuilder("/api/reservations?page=$page&pageSize=$pageSize")
+        if (!scope.isNullOrBlank()) query.append("&scope=").append(encode(scope))
+        if (!search.isNullOrBlank()) query.append("&search=").append(encode(search))
+        if (!from.isNullOrBlank()) query.append("&from=").append(encode(from))
+        if (!to.isNullOrBlank()) query.append("&to=").append(encode(to))
+
+        val response = ApiClient.requestArrayWithTotal(query.toString(), token = token)
+        val items = (0 until response.items.length()).map { index -> parse(response.items.getJSONObject(index)) }
+        return ReservationPage(items, response.totalCount)
+    }
+
+    /**
+     * Reservation counts by status for the logged-in prosumer (GET /api/reservations/summary).
+     * Used for the dashboard's count tiles; no count is worked out on the device.
+     */
+    fun getSummary(token: String): ReservationSummary {
+        val json = ApiClient.request("/api/reservations/summary", token = token)
+        return ReservationSummary(
+            pending = json.optInt("pending"),
+            approved = json.optInt("approved"),
+            completed = json.optInt("completed"),
+            cancelled = json.optInt("cancelled"),
+            approvedUpcoming = json.optInt("approvedUpcoming")
+        )
+    }
+
+    /**
+     * URL-encodes one query parameter value, so a search term with spaces or symbols cannot
+     * break the request's query string.
+     */
+    private fun encode(value: String): String = URLEncoder.encode(value, "UTF-8")
 
     /**
      * Reads one reservation fresh from the API (GET /api/reservations/{id}), so its status and
