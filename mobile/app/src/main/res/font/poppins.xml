@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: poppins.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: UI redesign
+    Created: 2026-09-29
+    Description: Font family mapping normal/bold styles to the bundled Poppins weights, so any
+                 view that asks for the default font or android:textStyle="bold" automatically
+                 gets Poppins Regular or Poppins Bold with no per-layout changes.
+-->
+<font-family xmlns:android="http://schemas.android.com/apk/res/android">
+    <font
+        android:font="@font/poppins_regular"
+        android:fontStyle="normal"
+        android:fontWeight="400" />
+    <font
+        android:font="@font/poppins_bold"
+        android:fontStyle="normal"
+        android:fontWeight="700" />
+</font-family>

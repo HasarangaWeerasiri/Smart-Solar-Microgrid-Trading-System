@@ -1,5 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: colors.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: UI redesign
+    Created: 2026-09-29
+    Description: App-wide dark fintech palette: navy backgrounds, an indigo-to-cyan brand
+                 gradient, and text colours tuned for contrast on dark surfaces. Replaces the
+                 default Material purple/teal scaffold colours.
+-->
 <resources>
+    <!-- Backgrounds and surfaces -->
+    <color name="color_bg">#0B1120</color>
+    <color name="color_surface">#141B2E</color>
+    <color name="color_surface_alt">#1C2540</color>
+    <color name="color_border">#28324A</color>
+
+    <!-- Brand gradient (indigo to cyan) -->
+    <color name="brand_indigo">#6366F1</color>
+    <color name="brand_indigo_dark">#4338CA</color>
+    <color name="brand_cyan">#22D3EE</color>
+    <color name="brand_teal">#2DD4BF</color>
+    <color name="brand_amber">#FBBF24</color>
+
+    <!-- Text -->
+    <color name="text_primary">#F8FAFC</color>
+    <color name="text_secondary">#A5B4CB</color>
+    <color name="text_hint">#64748B</color>
+
+    <!-- Legacy names still referenced by the base theme -->
     <color name="purple_200">#FFBB86FC</color>
     <color name="purple_500">#FF6200EE</color>
     <color name="purple_700">#FF3700B3</color>

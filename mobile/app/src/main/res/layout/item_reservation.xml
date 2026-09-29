@@ -6,6 +6,7 @@
     Created: 2026-09-25
     Description: One booking in the "My bookings" list: station and status on top, then the slot,
                  its date and time, and a note when the 12 hour rule has locked it.
+                 (Restyled 2026-09-29: rounded dark card with visible border.)
 -->
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
@@ -15,8 +16,8 @@
     android:clickable="true"
     android:focusable="true"
     android:foreground="?attr/selectableItemBackground"
-    app:cardCornerRadius="12dp"
-    app:cardElevation="2dp">
+    app:cardCornerRadius="18dp"
+    app:cardElevation="4dp">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -35,8 +36,9 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
-                android:textSize="16sp"
-                android:textStyle="bold" />
+                android:fontFamily="@font/poppins_semibold"
+                android:textColor="@color/text_primary"
+                android:textSize="16sp" />
 
             <TextView
                 android:id="@+id/item_status"
