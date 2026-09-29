@@ -20,8 +20,8 @@ const SECTIONS = [
   { title: 'User management', detail: 'Create Backoffice and Grid Operator users.', owner: 'Member A', to: '/backoffice/users' },
   { title: 'Pending activations', detail: 'Approve new prosumer registrations.', owner: 'Member A', to: '/backoffice/pending' },
   { title: 'Prosumer management', detail: 'Edit, deactivate and reactivate prosumers.', owner: 'Member A', to: '/backoffice/prosumers' },
-  { title: 'Microgrid nodes', detail: 'Register hubs with GPS, capacity and slots.', owner: 'Member B' },
-  { title: 'Booking slots', detail: 'Manage the battery slots at each station.', owner: 'Member B' },
+  { title: 'Microgrid nodes', detail: 'Register hubs with GPS, capacity and slots.', owner: 'Member B' , to: '/backoffice/stations'},
+  { title: 'Booking slots', detail: 'Manage the battery slots at each station.', owner: 'Member B', to: '/backoffice/stations' },
   { title: 'Reservations', detail: 'Create, update and cancel energy bookings.', owner: 'Member C', to: '/backoffice/reservations' },
   { title: 'Reservation approvals', detail: 'Approve pending energy bookings.', owner: 'Member C', to: '/backoffice/reservations/approvals' },
   { title: 'Reservation dashboard', detail: 'Live counts, current bookings and booking history.', owner: 'Member D', to: '/backoffice/reservations/dashboard' }
