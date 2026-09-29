@@ -6,6 +6,7 @@
  * Description: Routing for the web client. Public route for login, and protected sections
  *              for Backoffice and Grid Operator. Each member adds their own pages inside
  *              the section that matches their module.
+ *              (Reservation dashboard route added by Member D, 2026-09-28.)
  */
 
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
@@ -27,6 +28,8 @@ import HomePage from './pages/HomePage'
 // IT23245556 - Energy Reservations
 import ReservationsPage from './pages/ReservationsPage.jsx'
 import ReservationApprovalsPage from './pages/ReservationApprovalsPage.jsx'
+// Member D - Reservation dashboard
+import ReservationDashboardPage from './pages/ReservationDashboardPage.jsx'
 /**
  * Sends someone opening "/" to the right home page for their role,
  * or to the login page when nobody is signed in.
@@ -65,6 +68,8 @@ export default function App() {
             {/* IT23245556 - Energy Reservations */}
             <Route path="/backoffice/reservations" element={<ReservationsPage />} />
             <Route path="/backoffice/reservations/approvals" element={<ReservationApprovalsPage />} />
+            {/* Member D - Reservation dashboard */}
+            <Route path="/backoffice/reservations/dashboard" element={<ReservationDashboardPage />} />
           </Route>
         </Route>
 
@@ -72,12 +77,14 @@ export default function App() {
         <Route element={<ProtectedRoute allowedRoles={[ROLES.GRID_OPERATOR]} />}>
           <Route element={<Layout />}>
             <Route path="/operator" element={<OperatorHome />} />
-            
+
             {/* IT23218062 - Microgrid Nodes & Slots */}
             <Route path="/operator/availability" element={<SlotAvailabilityPage />} />
             {/* IT23245556 - Energy Reservations */}
             <Route path="/operator/reservations" element={<ReservationsPage />} />
             <Route path="/operator/reservations/approvals" element={<ReservationApprovalsPage />} />
+            {/* Member D - Reservation dashboard */}
+            <Route path="/operator/reservations/dashboard" element={<ReservationDashboardPage />} />
           </Route>
         </Route>
 

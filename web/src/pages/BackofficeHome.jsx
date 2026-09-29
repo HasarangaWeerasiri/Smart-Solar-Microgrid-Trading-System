@@ -6,6 +6,7 @@
  * Description: Landing page for Backoffice staff. Shows how many prosumer registrations are
  *              waiting for approval, and a card for each section of the system. Finished
  *              sections link to their page; the rest show who is building them.
+ *              (Reservation dashboard card added by Member D, 2026-09-28.)
  */
 
 import { useEffect, useState } from 'react'
@@ -22,7 +23,8 @@ const SECTIONS = [
   { title: 'Microgrid nodes', detail: 'Register hubs with GPS, capacity and slots.', owner: 'Member B' },
   { title: 'Booking slots', detail: 'Manage the battery slots at each station.', owner: 'Member B' },
   { title: 'Reservations', detail: 'Create, update and cancel energy bookings.', owner: 'Member C', to: '/backoffice/reservations' },
-  { title: 'Reservation approvals', detail: 'Approve pending energy bookings.', owner: 'Member C', to: '/backoffice/reservations/approvals' }
+  { title: 'Reservation approvals', detail: 'Approve pending energy bookings.', owner: 'Member C', to: '/backoffice/reservations/approvals' },
+  { title: 'Reservation dashboard', detail: 'Live counts, current bookings and booking history.', owner: 'Member D', to: '/backoffice/reservations/dashboard' }
 ]
 
 /**

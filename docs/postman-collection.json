@@ -4966,6 +4966,1450 @@
 						}
 					},
 					"response": []
+				},
+				{
+					"name": "C-100 List with scope=current (200, every row still open)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var now = Date.now();",
+									"pm.test(\"Every row is Pending/Approved with a slot that has not ended\", function () {",
+									"    data.forEach(function (r) {",
+									"        pm.expect([\"Pending\", \"Approved\"]).to.include(r.status);",
+									"        pm.expect(new Date(r.reservationEnd).getTime()).to.be.above(now);",
+									"    });",
+									"});",
+									"pm.test(\"X-Total-Count header is a number\", function () {",
+									"    pm.expect(Number(pm.response.headers.get(\"X-Total-Count\"))).to.be.a(\"number\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?scope=current&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "scope",
+									"value": "current"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-101 List with scope=history (200, every row finished either way)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var now = Date.now();",
+									"pm.test(\"Every row is Completed/Cancelled, or its slot already ended\", function () {",
+									"    data.forEach(function (r) {",
+									"        var finishedStatus = [\"Completed\", \"Cancelled\"].includes(r.status);",
+									"        var slotEnded = new Date(r.reservationEnd).getTime() <= now;",
+									"        pm.expect(finishedStatus || slotEnded).to.eql(true);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?scope=history&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "scope",
+									"value": "history"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-102 List with a search term (station name, 200, matches only that station)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"At least the bookings made at this station in this run are found\", function () {",
+									"    pm.expect(data.length).to.be.above(0);",
+									"});",
+									"pm.test(\"Every match really is that station (or its prosumer's NIC/name matched instead)\", function () {",
+									"    data.forEach(function (r) {",
+									"        var stationMatches = (r.stationName || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        var nicMatches = (r.prosumerNic || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        var nameMatches = (r.prosumerName || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        pm.expect(stationMatches || nicMatches || nameMatches).to.eql(true);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?search=Reservation%20Test%20Hub&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "Reservation Test Hub"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						},
+						"description": "\"Reservation Test Hub\" is the station created in C-09. search is case-insensitive and matches prosumer NIC, prosumer name or station name."
+					},
+					"response": []
+				},
+				{
+					"name": "C-103 List with a from/to date range and small pageSize (200, headers match)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A wide window covering everything the 7 day rule could ever have booked.",
+									"pm.collectionVariables.set(\"resRangeFrom\", new Date(Date.now() - 86400000).toISOString());",
+									"pm.collectionVariables.set(\"resRangeTo\", new Date(Date.now() + 8 * 86400000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var from = new Date(pm.collectionVariables.get(\"resRangeFrom\")).getTime();",
+									"var to = new Date(pm.collectionVariables.get(\"resRangeTo\")).getTime();",
+									"pm.test(\"Every row's slot start time is inside the requested range\", function () {",
+									"    data.forEach(function (r) {",
+									"        var start = new Date(r.reservationStart).getTime();",
+									"        pm.expect(start).to.be.at.least(from);",
+									"        pm.expect(start).to.be.at.most(to);",
+									"    });",
+									"});",
+									"pm.test(\"Body respects pageSize and headers report the same paging\", function () {",
+									"    pm.expect(data.length).to.be.at.most(5);",
+									"    pm.expect(pm.response.headers.get(\"X-Page\")).to.eql(\"1\");",
+									"    pm.expect(pm.response.headers.get(\"X-Page-Size\")).to.eql(\"5\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?from={{resRangeFrom}}&to={{resRangeTo}}&page=1&pageSize=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "{{resRangeFrom}}"
+								},
+								{
+									"key": "to",
+									"value": "{{resRangeTo}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "D - Reservation dashboard & QR",
+			"item": [
+				{
+					"name": "D-00 Setup - Backoffice creates an Active Dash Prosumer (saves dashProsumerNic)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "A Backoffice token on the registration call creates the account Active straight away, skipping the pending-activation step.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{dashProsumerNic}}\",\n    \"fullName\": \"Dashboard Test Prosumer\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"dashProsumerNic\", String(100000000000 + Math.floor(Math.random() * 899999999999)));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test(\"Created Active because a Backoffice token was sent\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-01 Setup - Login Dash Prosumer (saves dashProsumerToken)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{dashProsumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"dashProsumerToken\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-02 Setup - Create a station (saves dashStationId)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Dashboard Test Hub\",\n    \"address\": \"3 Market Street, Kandy\",\n    \"latitude\": 7.2906,\n    \"longitude\": 80.6337,\n    \"capacityKwh\": 100,\n    \"operatingStartTime\": \"06:00\",\n    \"operatingEndTime\": \"20:00\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashStationId\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-03 Setup - Slot 1, in 2 days (saves dashSlot1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{dashStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{dashStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Dash Slot 1 (+2 days)\",\n    \"startTime\": \"{{dashSlot1Start}}\",\n    \"endTime\": \"{{dashSlot1End}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var start = new Date(Date.now() + 2 * 86400000);",
+									"pm.collectionVariables.set(\"dashSlot1Start\", start.toISOString());",
+									"pm.collectionVariables.set(\"dashSlot1End\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashSlot1\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-04 Setup - Slot 2, in 3 days (saves dashSlot2)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{dashStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{dashStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Dash Slot 2 (+3 days)\",\n    \"startTime\": \"{{dashSlot2Start}}\",\n    \"endTime\": \"{{dashSlot2End}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var start = new Date(Date.now() + 3 * 86400000);",
+									"pm.collectionVariables.set(\"dashSlot2Start\", start.toISOString());",
+									"pm.collectionVariables.set(\"dashSlot2End\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashSlot2\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-05 Setup - Prosumer books slot 1 (saves dashReservationId, Pending)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{dashSlot1}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set(\"dashReservationId\", data.id);",
+									"pm.test(\"New booking starts Pending\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-06 Setup - Prosumer books slot 2 (saves dashReservation2Id, Pending)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{dashSlot2}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set(\"dashReservation2Id\", data.id);",
+									"pm.test(\"New booking starts Pending\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-07 Setup - Grid Operator approves reservation 1 (200 Approved)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Approved\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-10 Prosumer gets own reservation summary (200, own counts only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"description": "This prosumer has exactly one Pending booking (slot 2) and one Approved booking (slot 1) at this point, so the counts are exact."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Counts match this prosumer's two bookings exactly\", function () {",
+									"    pm.expect(data.pending).to.eql(1);",
+									"    pm.expect(data.approved).to.eql(1);",
+									"    pm.expect(data.completed).to.eql(0);",
+									"    pm.expect(data.cancelled).to.eql(0);",
+									"    pm.expect(data.approvedUpcoming).to.eql(1);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-11 Backoffice gets system-wide reservation summary (200, includes other prosumers too)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"description": "Staff see counts across every prosumer, so exact numbers depend on everything already in the database. Only lower bounds are checked here."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"System-wide counts are at least as large as this prosumer's own\", function () {",
+									"    pm.expect(data.pending).to.be.at.least(1);",
+									"    pm.expect(data.approved).to.be.at.least(1);",
+									"    pm.expect(data.completed).to.be.at.least(0);",
+									"    pm.expect(data.cancelled).to.be.at.least(0);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-12 No token gets summary (401)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-20 Prosumer tries to complete reservation 2 (403, StaffOnly)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-21 Grid Operator completes reservation 2 while still Pending (409)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message explains only an Approved reservation can be completed\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-22 Grid Operator approves reservation 2 (200 Approved)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"approve"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Approved\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-23 Grid Operator completes reservation 2 (200 Completed)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Status is now Completed, with who and when\", function () {",
+									"    pm.expect(data.status).to.eql(\"Completed\");",
+									"    pm.expect(data.completedAt).to.be.a(\"string\");",
+									"    pm.expect(data.completedBy).to.be.a(\"string\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-24 Grid Operator completes reservation 2 again (409, already Completed)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-30 ANOTHER prosumer requests QR for reservation 1 (403, not the owner)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-31 Owning prosumer requests QR for reservation 1 (200, saves dashQrToken)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Token and matching reservation id are returned\", function () {",
+									"    pm.expect(data.token).to.be.a(\"string\");",
+									"    pm.expect(data.reservationId).to.eql(pm.collectionVariables.get(\"dashReservationId\"));",
+									"    pm.expect(data.expiresAt).to.be.a(\"string\");",
+									"});",
+									"pm.collectionVariables.set(\"dashQrToken\", data.token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-32 Grid Operator requests QR for reservation 1 too (200, staff allowed)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-33 Owning prosumer requests QR for reservation 2 (409, now Completed not Approved)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message names the current status\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-40 Prosumer calls verify-qr (403, StaffOnly)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-41 Grid Operator verifies a malformed token (400)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"not-a-real-token\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-42 Grid Operator verifies dashQrToken with a corrupted signature (401)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrTokenBadSig}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Flip the last character of the signature half so the shape stays valid Base64Url",
+									"// but the signature no longer matches the payload.",
+									"var original = pm.collectionVariables.get(\"dashQrToken\");",
+									"var parts = original.split(\".\");",
+									"var signature = parts[1];",
+									"var lastChar = signature.charAt(signature.length - 1);",
+									"var replacement = lastChar === \"A\" ? \"B\" : \"A\";",
+									"var tampered = signature.slice(0, -1) + replacement;",
+									"pm.collectionVariables.set(\"dashQrTokenBadSig\", parts[0] + \".\" + tampered);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-43 Grid Operator verifies dashQrToken (200, matches reservation 1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"description": "verify-qr is read-only, so this can be called again after D-44 to prove the reservation itself did not change status yet.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Returns reservation 1's details, still Approved\", function () {",
+									"    pm.expect(data.reservationId).to.eql(pm.collectionVariables.get(\"dashReservationId\"));",
+									"    pm.expect(data.prosumerNic).to.eql(pm.collectionVariables.get(\"dashProsumerNic\"));",
+									"    pm.expect(data.status).to.eql(\"Approved\");",
+									"    pm.expect(data.stationName).to.eql(\"Dashboard Test Hub\");",
+									"    pm.expect(data.slotName).to.eql(\"Dash Slot 1 (+2 days)\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-44 Grid Operator completes reservation 1 (200 Completed, makes dashQrToken stale)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Completed\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-45 Grid Operator verifies the now-stale dashQrToken again (409, current status Completed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"description": "The token's signature is still valid (it was never revoked) and it has not expired, but the reservation it points to has since moved to Completed, so verify-qr correctly refuses it. This is why verify-qr always re-reads the reservation instead of trusting the token alone.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message names the reservation's current status\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
 				}
 			]
 		}
@@ -5144,6 +6588,66 @@
 		},
 		{
 			"key": "resGuardReservationId",
+			"value": ""
+		},
+		{
+			"key": "dashProsumerNic",
+			"value": ""
+		},
+		{
+			"key": "dashProsumerToken",
+			"value": ""
+		},
+		{
+			"key": "dashStationId",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1Start",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1End",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2Start",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2End",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2",
+			"value": ""
+		},
+		{
+			"key": "dashReservationId",
+			"value": ""
+		},
+		{
+			"key": "dashReservation2Id",
+			"value": ""
+		},
+		{
+			"key": "dashQrToken",
+			"value": ""
+		},
+		{
+			"key": "dashQrTokenBadSig",
+			"value": ""
+		},
+		{
+			"key": "resRangeFrom",
+			"value": ""
+		},
+		{
+			"key": "resRangeTo",
 			"value": ""
 		}
 	]

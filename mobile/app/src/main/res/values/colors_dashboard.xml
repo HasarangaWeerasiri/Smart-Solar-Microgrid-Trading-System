@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: colors_dashboard.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Member D
+    Created: 2026-09-28
+    Description: Colours for the prosumer dashboard's summary tiles. Pending/Approved/Completed
+                 reuse the exact colours from colors_reservations.xml's status badges, so a tile
+                 and the matching status badge always agree at a glance. Approved upcoming is not
+                 a status of its own, so it gets a distinct colour, matching the violet accent
+                 used for the same tile on the web dashboard.
+-->
+<resources>
+    <color name="tile_approved_upcoming_bg">#FFEDE9FE</color>
+    <color name="tile_approved_upcoming_text">#FF5B21B6</color>
+    <color name="offline_banner_bg">#FFFEF3C7</color>
+    <color name="offline_banner_text">#FF92400E</color>
+</resources>

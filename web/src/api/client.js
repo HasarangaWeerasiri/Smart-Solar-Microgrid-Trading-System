@@ -6,6 +6,9 @@
  * Description: The single place where the web client talks to the C# Web API. Every page
  *              calls the API through here, so the base address, the auth token and the
  *              error handling are written once. The web app never touches MongoDB.
+ *              (returnHeaders option added by Member D, 2026-09-28, so a caller that needs
+ *              response headers - e.g. GET /api/reservations' X-Total-Count - can ask for
+ *              them without every other caller's plain-body return value changing.)
  */
 
 // The address of the API. Read from .env so it can point at localhost during development
@@ -87,10 +90,12 @@ function safeParseJson(text) {
 /**
  * Sends one request to the API and returns the parsed body.
  * Adds the JSON content type and the bearer token automatically, and throws an
- * ApiError when the API answers with a failure status.
+ * ApiError when the API answers with a failure status. Pass { returnHeaders: true } to get
+ * back { data, headers } instead of just the body, for endpoints like GET /api/reservations
+ * that put paging metadata on response headers instead of in the body.
  */
 export async function apiRequest(path, options = {}) {
-  const { method = 'GET', body, auth = true } = options
+  const { method = 'GET', body, auth = true, returnHeaders = false } = options
 
   const headers = {}
   if (body !== undefined) {
@@ -119,7 +124,7 @@ export async function apiRequest(path, options = {}) {
 
   // 204 No Content has no body to read.
   if (response.status === 204) {
-    return null
+    return returnHeaders ? { data: null, headers: response.headers } : null
   }
 
   const text = await response.text()
@@ -129,5 +134,5 @@ export async function apiRequest(path, options = {}) {
     throw new ApiError(readErrorMessage(data, response.status), response.status, data)
   }
 
-  return data
+  return returnHeaders ? { data, headers: response.headers } : data
 }

@@ -6,6 +6,7 @@
  * Description: Landing page for Grid Operators. Operators run the day to day jobs: slot
  *              availability and watching bookings. Admin sections are not shown here, and
  *              the API refuses them as well.
+ *              (Reservation dashboard card linked by Member D, 2026-09-28.)
  */
 
 import { Link } from 'react-router-dom'
@@ -16,7 +17,7 @@ import { useAuth } from '../context/AuthContext.jsx'
 const PLANNED_SECTIONS = [
   { title: 'Battery slot availability', detail: 'Update the slots open at each station.', owner: 'Member B' },
   { title: 'Booking monitor', detail: 'Watch, approve and cancel power trading bookings.', owner: 'Member C', to: '/operator/reservations' },
-  { title: 'Reservation dashboard', detail: 'Pending reservations and approved future counts.', owner: 'Member D' }
+  { title: 'Reservation dashboard', detail: 'Pending reservations and approved future counts.', owner: 'Member D', to: '/operator/reservations/dashboard' }
 ]
 
 /**

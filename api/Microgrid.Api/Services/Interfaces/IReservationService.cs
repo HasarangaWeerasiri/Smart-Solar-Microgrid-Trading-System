@@ -6,6 +6,7 @@
  * Description: Contract for managing energy slot reservations. Creating, listing, updating,
  *              cancelling and approving bookings all sit behind this interface, together with
  *              the 7 day rule, the 12 hour rule and the "own bookings only" rule for prosumers.
+ *              (Dashboard summary, complete, and QR issue/verify added by Member D, 2026-09-28.)
  */
 
 using Microgrid.Api.DTOs;
@@ -24,10 +25,15 @@ public interface IReservationService
     Task<ServiceResult<ReservationResponse>> CreateAsync(CreateReservationRequest request, string callerId, string callerRole);
 
     /// <summary>
-    /// Lists reservations, latest reservation time first. A prosumer only ever sees their own;
-    /// staff see all and can filter by status, NIC and station.
+    /// Lists reservations, latest reservation time first, paged. A prosumer only ever sees
+    /// their own; staff see all and can filter by status, NIC, station, date range
+    /// (<paramref name="from"/>/<paramref name="to"/> on the slot start time), scope
+    /// ("current" | "history" | "all") and free-text search (prosumer NIC, prosumer name or
+    /// station name). Every filter, the search and the paging are applied in MongoDB.
     /// </summary>
-    Task<ServiceResult<List<ReservationResponse>>> GetAllAsync(string? status, string? nic, string? stationId, string callerId, string callerRole);
+    Task<ServiceResult<ReservationListResult>> GetAllAsync(
+        string? status, string? nic, string? stationId, string? from, string? to,
+        string? scope, string? search, int page, int pageSize, string callerId, string callerRole);
 
     /// <summary>
     /// Returns one reservation. A prosumer may only read their own.
@@ -62,4 +68,28 @@ public interface IReservationService
     /// Used to stop a booked slot's time being changed, or the slot being deactivated.
     /// </summary>
     Task<bool> HasActiveReservationsForSlotAsync(string slotId);
+
+    /// <summary>
+    /// Counts reservations by status. A prosumer only ever gets counts for their own NIC;
+    /// staff get system-wide counts.
+    /// </summary>
+    Task<ServiceResult<ReservationSummaryResponse>> GetSummaryAsync(string callerId, string callerRole);
+
+    /// <summary>
+    /// Marks an Approved reservation Completed, after a Grid Operator verifies its QR code
+    /// and finishes the energy transfer. Staff only; the controller enforces the role.
+    /// </summary>
+    Task<ServiceResult<ReservationResponse>> CompleteAsync(string id, string callerId);
+
+    /// <summary>
+    /// Issues a signed, time-limited QR token for an Approved reservation. The reservation's
+    /// owner or any staff member may request it.
+    /// </summary>
+    Task<ServiceResult<ReservationQrResponse>> GetQrAsync(string id, string callerId, string callerRole);
+
+    /// <summary>
+    /// Verifies a scanned QR token and returns the booking it belongs to. Read-only: never
+    /// changes a reservation's status. Staff only; the controller enforces the role.
+    /// </summary>
+    Task<ServiceResult<VerifyQrResponse>> VerifyQrAsync(VerifyQrRequest request);
 }
