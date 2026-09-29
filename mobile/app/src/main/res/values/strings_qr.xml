@@ -1,0 +1,42 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: strings_qr.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Member D
+    Created: 2026-09-28
+    Description: Text for the QR flow: the prosumer's "Show QR code" screen and the operator's
+                 scanner screen. Kept in its own file so it never clashes with other members'
+                 changes to strings.xml.
+-->
+<resources>
+    <!-- Booking details screen -->
+    <string name="show_qr_code">Show QR code</string>
+
+    <!-- Prosumer: QR code screen -->
+    <string name="qr_title">Booking QR code</string>
+    <string name="qr_loading">Getting your QR code…</string>
+    <string name="qr_valid_until">Valid until %1$s</string>
+    <string name="qr_instructions">Show this to the Grid Operator at the station.</string>
+
+    <!-- Operator: scanner screen -->
+    <string name="scan_qr_code">Scan QR code</string>
+    <string name="scanner_title">Scan booking QR code</string>
+    <string name="scanner_hint">Point the camera at the prosumer\'s QR code.</string>
+    <string name="scanner_verifying">Checking the code…</string>
+    <string name="scanner_completing">Completing the transfer…</string>
+    <string name="scanner_not_microgrid_code">This does not look like a Microgrid booking QR code.</string>
+    <string name="scanner_camera_permission_rationale">Camera access is needed to scan a booking QR code.</string>
+    <string name="scanner_camera_permission_denied">Camera permission was not granted, so codes cannot be scanned. Grant it in Settings &gt; Apps &gt; Microgrid &gt; Permissions, then try again.</string>
+    <string name="grant_camera_permission">Grant camera permission</string>
+    <string name="try_again">Try again</string>
+    <string name="scan_another_code">Scan another code</string>
+    <string name="complete_transfer">Complete transfer</string>
+    <string name="completing">Completing…</string>
+    <string name="transfer_completed_title">Transfer completed</string>
+    <string name="transfer_completed_message">The booking is now marked Completed.</string>
+    <string name="scan_next_code">Scan next code</string>
+
+    <!-- Verified booking card labels. label_nic already exists in strings.xml (Register screen)
+         and is reused here as-is. -->
+    <string name="label_prosumer">Prosumer</string>
+</resources>

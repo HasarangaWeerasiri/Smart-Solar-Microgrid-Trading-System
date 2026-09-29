@@ -6,6 +6,7 @@
  * Description: Home screen for a Grid Operator using the mobile app. For now it proves the
  *              role-based routing works. The QR scanner and the map of nearby stations are
  *              added here by the member who owns that module.
+ *              (button_scan_qr wired by Member D, 2026-09-28, opening QrScannerActivity.)
  */
 
 package lk.sliit.microgrid.ui
@@ -42,6 +43,9 @@ class OperatorHomeActivity : AppCompatActivity() {
             getString(R.string.welcome_named, user.fullName)
         findViewById<TextView>(R.id.text_role).text = getString(R.string.role_label, user.role)
 
+        findViewById<Button>(R.id.button_scan_qr).setOnClickListener {
+            startActivity(Intent(this, QrScannerActivity::class.java))
+        }
         findViewById<Button>(R.id.button_logout).setOnClickListener { logout() }
     }
 

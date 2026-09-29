@@ -6,6 +6,9 @@
  * Description: Calls for the energy reservation endpoints of the Web API. These only send and
  *              receive data. The 7 day rule, the 12 hour rule, double booking and "own bookings
  *              only" are all decided by the API; its message is shown to the user as it is.
+ *              (getQr, verifyQr and complete added by Member D, 2026-09-28, for the QR flow:
+ *              a prosumer's app draws the token the server issues; an operator's app verifies a
+ *              scanned token - read-only - then, as a separate step, marks the transfer done.)
  *              (getSummary and list added by Member D, 2026-09-28, for the prosumer dashboard.
  *              Both only ever return the caller's own bookings - the API scopes a Prosumer
  *              token to its own NIC server-side, so neither sends a nic parameter.)
@@ -13,7 +16,9 @@
 
 package lk.sliit.microgrid.data.remote
 
+import lk.sliit.microgrid.data.model.QrToken
 import lk.sliit.microgrid.data.model.Reservation
+import lk.sliit.microgrid.data.model.VerifiedBooking
 import lk.sliit.microgrid.data.model.ReservationSummary
 import org.json.JSONObject
 import java.net.URLEncoder
@@ -121,6 +126,51 @@ object ReservationApi {
      */
     fun cancel(id: String, token: String): Reservation {
         return parse(ApiClient.request("/api/reservations/$id/cancel", method = "POST", token = token))
+    }
+
+    /**
+     * Issues a signed QR token for an Approved reservation (GET /api/reservations/{id}/qr).
+     * The server builds and signs the token; this only reads it back. 409 if the booking's
+     * status is no longer Approved (for example it changed since the screen was last loaded).
+     */
+    fun getQr(id: String, token: String): QrToken {
+        val json = ApiClient.request("/api/reservations/$id/qr", token = token)
+        return QrToken(
+            token = json.getString("token"),
+            reservationId = json.getString("reservationId"),
+            expiresAt = json.getString("expiresAt")
+        )
+    }
+
+    /**
+     * Verifies a token scanned from a prosumer's QR code (POST /api/reservations/verify-qr,
+     * staff only) and returns the booking it belongs to. Read-only: this never changes the
+     * reservation - only complete() does that, as a separate, explicit step.
+     */
+    fun verifyQr(scannedToken: String, token: String): VerifiedBooking {
+        val body = JSONObject().put("token", scannedToken)
+        val json = ApiClient.request("/api/reservations/verify-qr", method = "POST", body = body, token = token)
+
+        return VerifiedBooking(
+            reservationId = json.getString("reservationId"),
+            prosumerNic = json.getString("prosumerNic"),
+            prosumerFullName = readOptional(json, "prosumerFullName"),
+            stationName = readOptional(json, "stationName"),
+            slotName = readOptional(json, "slotName"),
+            startTime = json.getString("startTime"),
+            endTime = json.getString("endTime"),
+            status = json.getString("status")
+        )
+    }
+
+    /**
+     * Marks an Approved reservation Completed, once its QR code has been verified
+     * (POST /api/reservations/{id}/complete). POST is used, not PATCH, for the same reason as
+     * cancel(): Android's HttpURLConnection cannot send PATCH, and the API exposes a POST twin
+     * on every route that needs one from this app.
+     */
+    fun complete(id: String, token: String): Reservation {
+        return parse(ApiClient.request("/api/reservations/$id/complete", method = "POST", token = token))
     }
 
     /**
