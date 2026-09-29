@@ -10,6 +10,8 @@
  *              Business rule 6 (12 hours' notice) is decided by the API. The buttons are always
  *              shown but only pressable while the API's canModify flag is true, and the API refuses the request
  *              anyway if the rule is broken; its message is then shown here.
+ *              (button_show_qr wired by Member D, 2026-09-28: visible only for an Approved
+ *              booking, opening ReservationQrActivity.)
  */
 
 package lk.sliit.microgrid.ui
@@ -53,6 +55,7 @@ class ReservationDetailsActivity : NetworkPermissionActivity() {
     private lateinit var lockedNote: TextView
     private lateinit var changeButton: Button
     private lateinit var cancelButton: Button
+    private lateinit var showQrButton: Button
 
     // Used to move back to the main thread after a network call finishes.
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -83,11 +86,15 @@ class ReservationDetailsActivity : NetworkPermissionActivity() {
         lockedNote = findViewById(R.id.text_locked_note)
         changeButton = findViewById(R.id.button_change_slot)
         cancelButton = findViewById(R.id.button_cancel_booking)
+        showQrButton = findViewById(R.id.button_show_qr)
 
         changeButton.setOnClickListener {
             current?.let { BookReservationActivity.startForChange(this, it) }
         }
         cancelButton.setOnClickListener { confirmCancel() }
+        showQrButton.setOnClickListener {
+            current?.let { ReservationQrActivity.start(this, it) }
+        }
     }
 
     /**
@@ -143,6 +150,10 @@ class ReservationDetailsActivity : NetworkPermissionActivity() {
         changeButton.isEnabled = reservation.canModify
         cancelButton.isEnabled = reservation.canModify
         cancelButton.text = getString(R.string.cancel_booking)
+
+        // The QR code only exists for an Approved booking - the API itself refuses to issue
+        // one for any other status, so the button is simply hidden rather than shown disabled.
+        showQrButton.visibility = if (reservation.status == "Approved") View.VISIBLE else View.GONE
 
         if (reservation.canModify) {
             lockedNote.visibility = View.GONE

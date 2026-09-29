@@ -8,6 +8,7 @@
  *              them from the web app to manage and approve bookings. The controller stays thin:
  *              it reads who is calling from the token and lets ReservationService apply the
  *              7 day rule, the 12 hour rule and every other booking rule.
+ *              (Dashboard summary, complete, and QR issue/verify added by Member D, 2026-09-28.)
  */
 
 using Microgrid.Api.DTOs;
@@ -41,13 +42,39 @@ public class ReservationsController : ApiControllerBase
     }
 
     /// <summary>
-    /// Lists reservations. Optional filters: ?status=Pending&amp;nic=...&amp;stationId=...
-    /// A prosumer always gets only their own bookings.
+    /// Lists reservations, paged. Optional filters: status, nic, stationId, from/to (ISO 8601,
+    /// on the slot start time), scope ("current" | "history" | "all") and search (matches
+    /// prosumer NIC, prosumer name or station name). A prosumer always gets only their own
+    /// bookings. Does not use <see cref="ApiControllerBase.ToResponse{T}"/> like the other
+    /// actions, because the total count, page and page size need to go on the response as
+    /// X-Total-Count / X-Page / X-Page-Size headers while the body stays a plain
+    /// ReservationResponse[] for backward compatibility with every existing caller.
     /// </summary>
     [HttpGet]
-    public async Task<IActionResult> GetAll([FromQuery] string? status, [FromQuery] string? nic, [FromQuery] string? stationId)
+    public async Task<IActionResult> GetAll(
+        [FromQuery] string? status,
+        [FromQuery] string? nic,
+        [FromQuery] string? stationId,
+        [FromQuery] string? from,
+        [FromQuery] string? to,
+        [FromQuery] string? scope,
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 50)
     {
-        return ToResponse(await _reservationService.GetAllAsync(status, nic, stationId, CurrentUserId, CurrentUserRole));
+        var result = await _reservationService.GetAllAsync(
+            status, nic, stationId, from, to, scope, search, page, pageSize, CurrentUserId, CurrentUserRole);
+
+        if (!result.Success)
+        {
+            return StatusCode(result.StatusCode, new { error = result.Error });
+        }
+
+        Response.Headers["X-Total-Count"] = result.Data!.TotalCount.ToString();
+        Response.Headers["X-Page"] = result.Data.Page.ToString();
+        Response.Headers["X-Page-Size"] = result.Data.PageSize.ToString();
+
+        return StatusCode(result.StatusCode, result.Data.Items);
     }
 
     /// <summary>
@@ -87,5 +114,50 @@ public class ReservationsController : ApiControllerBase
     public async Task<IActionResult> Approve(string id)
     {
         return ToResponse(await _reservationService.ApproveAsync(id, CurrentUserId));
+    }
+
+    /// <summary>
+    /// Reservation counts by status, for dashboard tiles. A prosumer gets counts for their
+    /// own bookings only; staff get system-wide counts.
+    /// </summary>
+    [HttpGet("summary")]
+    public async Task<IActionResult> GetSummary()
+    {
+        return ToResponse(await _reservationService.GetSummaryAsync(CurrentUserId, CurrentUserRole));
+    }
+
+    /// <summary>
+    /// Marks an Approved reservation Completed, once a Grid Operator has verified its QR code
+    /// and finished the transfer. Also answers POST on the same route, because Android's
+    /// HttpURLConnection cannot send PATCH requests.
+    /// </summary>
+    [HttpPatch("{id}/complete")]
+    [HttpPost("{id}/complete")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> Complete(string id)
+    {
+        return ToResponse(await _reservationService.CompleteAsync(id, CurrentUserId));
+    }
+
+    /// <summary>
+    /// Issues a signed QR token for an Approved reservation. The reservation's owner or any
+    /// staff member may request it.
+    /// </summary>
+    [HttpGet("{id}/qr")]
+    public async Task<IActionResult> GetQr(string id)
+    {
+        return ToResponse(await _reservationService.GetQrAsync(id, CurrentUserId, CurrentUserRole));
+    }
+
+    /// <summary>
+    /// Verifies a token scanned from a prosumer's QR code and returns the booking it belongs
+    /// to. Read-only: never changes the reservation's status. Backoffice and Grid Operator
+    /// staff only.
+    /// </summary>
+    [HttpPost("verify-qr")]
+    [Authorize(Policy = "StaffOnly")]
+    public async Task<IActionResult> VerifyQr([FromBody] VerifyQrRequest request)
+    {
+        return ToResponse(await _reservationService.VerifyQrAsync(request));
     }
 }

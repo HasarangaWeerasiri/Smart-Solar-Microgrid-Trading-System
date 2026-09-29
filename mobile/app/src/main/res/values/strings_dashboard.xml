@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: strings_dashboard.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Member D
+    Created: 2026-09-28
+    Description: Text for the prosumer dashboard screen. Kept in its own file so it never
+                 clashes with other members' changes to strings.xml.
+-->
+<resources>
+    <string name="dashboard">Dashboard</string>
+    <string name="dashboard_title">Your dashboard</string>
+    <string name="dashboard_subtitle">Live counts and bookings, straight from the server.</string>
+
+    <!-- Summary tiles -->
+    <string name="tile_pending">Pending</string>
+    <string name="tile_approved">Approved</string>
+    <string name="tile_completed">Completed</string>
+    <string name="tile_approved_upcoming">Approved upcoming</string>
+
+    <!-- Tabs -->
+    <string name="tab_current">Current bookings</string>
+    <string name="tab_history">Booking history</string>
+
+    <!-- Filters -->
+    <string name="search_hint">Search station or slot</string>
+    <string name="date_from">From</string>
+    <string name="date_to">To</string>
+    <string name="clear_filters">Clear filters</string>
+
+    <!-- States -->
+    <string name="dashboard_loading">Loading your bookings…</string>
+    <string name="dashboard_count">%1$d of %2$d booking(s)</string>
+    <string name="dashboard_empty_current">No current bookings right now.</string>
+    <string name="dashboard_empty_history">No booking history yet.</string>
+    <string name="dashboard_empty_search">No bookings match \"%1$s\".</string>
+    <string name="dashboard_empty_dates">No bookings in this date range.</string>
+    <string name="dashboard_empty_search_and_dates">No bookings match \"%1$s\" in this date range.</string>
+    <string name="dashboard_error_retry">Retry</string>
+    <string name="dashboard_offline_banner">Showing saved data - could not reach server</string>
+</resources>

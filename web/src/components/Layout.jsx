@@ -6,6 +6,7 @@
  * Description: Shared frame around every signed-in page. A side navigation bar holds the
  *              app name, the links for the current role, and the signed-in user with a
  *              logout button. On small screens the sidebar slides in from a menu button.
+ *              (Reservation dashboard link added by Member D, 2026-09-28.)
  */
 
 import { useState } from 'react'
@@ -28,7 +29,9 @@ function linksForRole(role) {
       { to: '/backoffice/stations', label: 'Stations' },
       // IT23245556 - Energy Reservations
       { to: '/backoffice/reservations', label: 'Reservations', end: true },
-      { to: '/backoffice/reservations/approvals', label: 'Reservation approvals' }
+      { to: '/backoffice/reservations/approvals', label: 'Reservation approvals' },
+      // Member D - Reservation dashboard
+      { to: '/backoffice/reservations/dashboard', label: 'Reservation dashboard' }
     ]
   }
 
@@ -39,7 +42,9 @@ function linksForRole(role) {
       { to: '/operator/availability', label: 'Slot Availability'},
       // IT23245556 - Energy Reservations
       { to: '/operator/reservations', label: 'Reservations', end: true },
-      { to: '/operator/reservations/approvals', label: 'Reservation approvals' }
+      { to: '/operator/reservations/approvals', label: 'Reservation approvals' },
+      // Member D - Reservation dashboard
+      { to: '/operator/reservations/dashboard', label: 'Reservation dashboard' }
     ]
   }
 

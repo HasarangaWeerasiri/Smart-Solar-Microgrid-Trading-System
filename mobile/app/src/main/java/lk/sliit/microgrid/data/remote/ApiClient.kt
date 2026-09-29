@@ -6,11 +6,15 @@
  * Description: The single place where the Android app talks to the C# Web API. Every screen
  *              calls the API through here, so the base address, the auth token and the error
  *              handling are written once. The app never touches MongoDB directly.
+ *              (BASE_URL moved to a BuildConfig field, and requestArrayWithTotal added, by
+ *              Member D, 2026-09-28, for the prosumer dashboard's paged, filtered list and its
+ *              X-Total-Count header.)
  */
 
 package lk.sliit.microgrid.data.remote
 
 import android.util.Log
+import lk.sliit.microgrid.BuildConfig
 import org.json.JSONObject
 import org.json.JSONArray
 import java.io.BufferedReader
@@ -25,22 +29,32 @@ import java.net.URL
 class ApiException(message: String, val statusCode: Int) : Exception(message)
 
 /**
+ * One page of a JSON array response, together with the total row count read from the
+ * X-Total-Count response header (see GET /api/reservations, which paginates this way instead
+ * of changing its response body shape).
+ */
+data class ArrayPage(val items: JSONArray, val totalCount: Int)
+
+/**
  * Sends requests to the Web API using HttpURLConnection, which is part of Android itself.
  * No third party networking library is used, so the app stays pure native.
  */
 object ApiClient {
 
     /**
-     * Base address of the API.
+     * Base address of the API, read from BuildConfig.API_BASE_URL (see app/build.gradle.kts),
+     * so it is set in exactly one place and never hard-coded in source. The default points at
+     * the Android emulator's alias for the development machine; override it per machine or for
+     * the IIS-hosted API by adding a line to the git-ignored mobile/local.properties:
      *
-     * 10.0.2.2 is a special address in the Android emulator that points back at the
-     * development machine. A real phone on the same Wi-Fi must use the machine's LAN
-     * address instead, for example http://192.168.1.6:5288
+     *     API_BASE_URL=http://192.168.1.6:5288
+     *
+     * A real phone on the same Wi-Fi needs the machine's LAN address; a published API needs
+     * its IIS address. Whichever address is used must also be added to
+     * res/xml/network_security_config.xml, since Android blocks plain HTTP otherwise.
      */
-    // const val BASE_URL: String = "http://10.0.2.2:5288" 
-    //const val BASE_URL: String = "http://172.20.10.4:5288"
+    const val BASE_URL: String = BuildConfig.API_BASE_URL
 
-    const val BASE_URL: String = "http://127.0.0.1:5288"
     private const val CONNECT_TIMEOUT_MS = 15000
     private const val READ_TIMEOUT_MS = 15000
 
@@ -172,6 +186,58 @@ object ApiClient {
                 0
             )
 
+        } finally {
+            connection.disconnect()
+        }
+    }
+
+    /**
+     * Sends a request to an API endpoint that returns a JSON array paged with an
+     * X-Total-Count response header, for example GET /api/reservations. Call this on a
+     * background thread.
+     */
+    fun requestArrayWithTotal(
+        path: String,
+        method: String = "GET",
+        body: JSONObject? = null,
+        token: String? = null
+    ): ArrayPage {
+        val connection = openConnection(path, method, body != null, token)
+
+        try {
+            if (body != null) {
+                connection.outputStream.use { output ->
+                    output.write(body.toString().toByteArray(Charsets.UTF_8))
+                }
+            }
+
+            val status = connection.responseCode
+            val text = readBody(connection, status)
+
+            if (status !in 200..299) {
+                throw ApiException(readErrorMessage(text, status), status)
+            }
+
+            val items = if (text.isBlank()) JSONArray() else JSONArray(text)
+            // getHeaderField does a case-insensitive name match, so the exact casing the
+            // server sent the header in does not matter here.
+            val totalCount = connection.getHeaderField("X-Total-Count")?.toIntOrNull() ?: items.length()
+
+            return ArrayPage(items, totalCount)
+        } catch (exception: ApiException) {
+            throw exception
+        } catch (exception: SocketTimeoutException) {
+            Log.w(TAG, "Timed out calling $method $path", exception)
+            throw ApiException(
+                "The server did not respond in time. Check the API is running and reachable.",
+                0
+            )
+        } catch (exception: Exception) {
+            Log.w(TAG, "Could not call $method $path", exception)
+            throw ApiException(
+                "Cannot reach the server. Check the API is running and the address is correct.",
+                0
+            )
         } finally {
             connection.disconnect()
         }
