@@ -82,29 +82,37 @@ export default function SlotsPage() {
     setFormError('')
   }
 
-  async function handleSlotSubmit(slotData) {
-    setSaving(true)
-    setFormError('')
+async function handleSlotSubmit(slotData) {
+  setSaving(true)
+  setFormError('')
 
-    try {
-      if (selectedSlot) {
-        await updateSlot(selectedSlot.id, slotData)
-      } else {
-        await createSlot(stationId, slotData)
-      }
-
-      setShowForm(false)
-      setSelectedSlot(null)
-
-      await loadPage()
-    } catch (error) {
-      setFormError(
-        error.message || 'Unable to save booking slot.'
-      )
-    } finally {
-      setSaving(false)
+  try {
+    // The datetime-local inputs contain browser-local time.
+    // Convert them to UTC before sending them to the API.
+    const payload = {
+      ...slotData,
+      startTime: new Date(slotData.startTime).toISOString(),
+      endTime: new Date(slotData.endTime).toISOString()
     }
+
+    if (selectedSlot) {
+      await updateSlot(selectedSlot.id, payload)
+    } else {
+      await createSlot(stationId, payload)
+    }
+
+    setShowForm(false)
+    setSelectedSlot(null)
+
+    await loadPage()
+  } catch (error) {
+    setFormError(
+      error.message || 'Unable to save booking slot.'
+    )
+  } finally {
+    setSaving(false)
   }
+}
 
   function requestStatusChange(slot) {
     setStatusError('')

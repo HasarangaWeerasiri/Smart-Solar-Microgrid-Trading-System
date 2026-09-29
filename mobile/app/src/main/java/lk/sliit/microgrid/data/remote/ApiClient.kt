@@ -38,8 +38,9 @@ object ApiClient {
      * address instead, for example http://192.168.1.6:5288
      */
     // const val BASE_URL: String = "http://10.0.2.2:5288" 
-    const val BASE_URL: String = "http://172.20.10.4:5288"
+    //const val BASE_URL: String = "http://172.20.10.4:5288"
 
+    const val BASE_URL: String = "http://127.0.0.1:5288"
     private const val CONNECT_TIMEOUT_MS = 15000
     private const val READ_TIMEOUT_MS = 15000
 
