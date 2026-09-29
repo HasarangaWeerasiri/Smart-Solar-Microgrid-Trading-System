@@ -13,7 +13,9 @@ using Microgrid.Api.Services.Interfaces;
 using MongoDB.Bson;
 using MongoDB.Driver;
 using System.Globalization;
+
 namespace Microgrid.Api.Services;
+
 
 /// Manages energy booking slots stored in the EnergyBookingSlots collection.
 public class SlotService : ISlotService
@@ -22,9 +24,11 @@ public class SlotService : ISlotService
     private readonly IMongoCollection<SolarStation> _stations;
     private readonly IReservationService _reservationService;
 
-    /// Creates the service with the MongoDB database and the reservation service supplied
-    /// by dependency injection. The reservation service answers whether a slot is booked.
-    public SlotService(IMongoDatabase database, IReservationService reservationService)
+    
+    /// Creates the service with the MongoDB database and reservation service.
+    public SlotService(
+        IMongoDatabase database,
+        IReservationService reservationService)
     {
         _slots = database.GetCollection<EnergyBookingSlot>(
             "EnergyBookingSlots");
@@ -42,7 +46,8 @@ public class SlotService : ISlotService
         if (!ObjectId.TryParse(stationId, out _))
         {
             return ServiceResult<List<SlotResponse>>.Fail(
-                "Invalid station id.", 400);
+                "Invalid station id.",
+                400);
         }
 
         var station = await FindStationAsync(stationId);
@@ -50,7 +55,8 @@ public class SlotService : ISlotService
         if (station is null)
         {
             return ServiceResult<List<SlotResponse>>.Fail(
-                "No solar station was found with that id.", 404);
+                "No solar station was found with that id.",
+                404);
         }
 
         var slots = await _slots
@@ -68,7 +74,8 @@ public class SlotService : ISlotService
         if (!ObjectId.TryParse(id, out _))
         {
             return ServiceResult<SlotResponse>.Fail(
-                "Invalid slot id.", 400);
+                "Invalid slot id.",
+                400);
         }
 
         var slot = await FindSlotAsync(id);
@@ -76,7 +83,8 @@ public class SlotService : ISlotService
         if (slot is null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "No booking slot was found with that id.", 404);
+                "No booking slot was found with that id.",
+                404);
         }
 
         return ServiceResult<SlotResponse>.Ok(
@@ -91,7 +99,8 @@ public class SlotService : ISlotService
         if (!ObjectId.TryParse(stationId, out _))
         {
             return ServiceResult<SlotResponse>.Fail(
-                "Invalid station id.", 400);
+                "Invalid station id.",
+                400);
         }
 
         var station = await FindStationAsync(stationId);
@@ -99,7 +108,8 @@ public class SlotService : ISlotService
         if (station is null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "No solar station was found with that id.", 404);
+                "No solar station was found with that id.",
+                404);
         }
 
         if (station.Status != StationStatus.Active)
@@ -117,10 +127,12 @@ public class SlotService : ISlotService
         if (validationError is not null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                validationError, 400);
+                validationError,
+                400);
         }
 
-        var operatingHoursError =       ValidateSlotOperatingHours(
+        // Operating hours are station-local Sri Lanka times.
+        var operatingHoursError = ValidateSlotOperatingHours(
             station,
             request.StartTime,
             request.EndTime);
@@ -128,7 +140,8 @@ public class SlotService : ISlotService
         if (operatingHoursError is not null)
         {
             return ServiceResult<SlotResponse>.Fail(
-            operatingHoursError, 400);
+                operatingHoursError,
+                400);
         }
 
         var hasOverlap = await HasOverlappingSlotAsync(
@@ -158,7 +171,8 @@ public class SlotService : ISlotService
         await _slots.InsertOneAsync(slot);
 
         return ServiceResult<SlotResponse>.Ok(
-            SlotResponse.FromSlot(slot), 201);
+            SlotResponse.FromSlot(slot),
+            201);
     }
 
     /// Updates an existing energy booking slot.
@@ -169,7 +183,8 @@ public class SlotService : ISlotService
         if (!ObjectId.TryParse(id, out _))
         {
             return ServiceResult<SlotResponse>.Fail(
-                "Invalid slot id.", 400);
+                "Invalid slot id.",
+                400);
         }
 
         var slot = await FindSlotAsync(id);
@@ -177,7 +192,8 @@ public class SlotService : ISlotService
         if (slot is null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "No booking slot was found with that id.", 404);
+                "No booking slot was found with that id.",
+                404);
         }
 
         var validationError = ValidateSlot(
@@ -188,10 +204,11 @@ public class SlotService : ISlotService
         if (validationError is not null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                validationError, 400);
+                validationError,
+                400);
         }
 
-        var station = await FindStationAsync    (slot.StationId);
+        var station = await FindStationAsync(slot.StationId);
 
         if (station is null)
         {
@@ -200,6 +217,7 @@ public class SlotService : ISlotService
                 409);
         }
 
+        // Check the requested slot using Sri Lanka station operating hours.
         var operatingHoursError = ValidateSlotOperatingHours(
             station,
             request.StartTime,
@@ -208,7 +226,8 @@ public class SlotService : ISlotService
         if (operatingHoursError is not null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                operatingHoursError, 400);
+                operatingHoursError,
+                400);
         }
 
         var hasOverlap = await HasOverlappingSlotAsync(
@@ -224,13 +243,25 @@ public class SlotService : ISlotService
                 409);
         }
 
-        // A reservation keeps the slot's time it was booked for, so the time of a booked
-        // slot cannot be moved. The name and availability can still be changed.
-        var timeChanged =
-            Math.Abs((request.StartTime.ToUniversalTime() - slot.StartTime).TotalSeconds) >= 1
-            || Math.Abs((request.EndTime.ToUniversalTime() - slot.EndTime).TotalSeconds) >= 1;
+        // A reservation keeps the slot's original booked time.
+        // Therefore, the time of a booked slot cannot be changed.
+        var requestedStartUtc = ToUtc(request.StartTime);
+        var requestedEndUtc = ToUtc(request.EndTime);
+        var existingStartUtc = ToUtc(slot.StartTime);
+        var existingEndUtc = ToUtc(slot.EndTime);
 
-        if (timeChanged && await _reservationService.HasActiveReservationsForSlotAsync(id))
+        var timeChanged =
+            Math.Abs(
+                (requestedStartUtc - existingStartUtc)
+                .TotalSeconds) >= 1
+            ||
+            Math.Abs(
+                (requestedEndUtc - existingEndUtc)
+                .TotalSeconds) >= 1;
+
+        if (timeChanged &&
+            await _reservationService
+                .HasActiveReservationsForSlotAsync(id))
         {
             return ServiceResult<SlotResponse>.Fail(
                 "This slot has an active reservation, so its time cannot be changed. Cancel the reservation first.",
@@ -254,7 +285,6 @@ public class SlotService : ISlotService
             SlotResponse.FromSlot(updated!));
     }
 
-
     /// Updates whether an active booking slot is currently available.
     /// This operation is used by Grid Operators.
     public async Task<ServiceResult<SlotResponse>> UpdateAvailabilityAsync(
@@ -264,47 +294,8 @@ public class SlotService : ISlotService
         if (!ObjectId.TryParse(id, out _))
         {
             return ServiceResult<SlotResponse>.Fail(
-            "Invalid slot id.", 400);
-    }
-
-    var slot = await FindSlotAsync(id);
-
-    if (slot is null)
-    {
-        return ServiceResult<SlotResponse>.Fail(
-            "No booking slot was found with that id.", 404);
-    }
-
-    if (slot.Status == SlotStatus.Deactivated)
-    {
-        return ServiceResult<SlotResponse>.Fail(
-            "Availability cannot be changed while the slot is deactivated.",
-            409);
-    }
-
-    var updatedAt = DateTime.UtcNow;
-
-    var update = Builders<EnergyBookingSlot>.Update
-        .Set(s => s.IsAvailable, request.IsAvailable)
-        .Set(s => s.UpdatedAt, updatedAt);
-
-    await _slots.UpdateOneAsync(
-        s => s.Id == slot.Id,
-        update);
-
-    slot.IsAvailable = request.IsAvailable;
-    slot.UpdatedAt = updatedAt;
-
-    return ServiceResult<SlotResponse>.Ok(
-        SlotResponse.FromSlot(slot));
-}
-    /// Deactivates a booking slot and makes it unavailable.
-    public async Task<ServiceResult<SlotResponse>> DeactivateAsync(string id)
-    {
-        if (!ObjectId.TryParse(id, out _))
-        {
-            return ServiceResult<SlotResponse>.Fail(
-                "Invalid slot id.", 400);
+                "Invalid slot id.",
+                400);
         }
 
         var slot = await FindSlotAsync(id);
@@ -312,17 +303,65 @@ public class SlotService : ISlotService
         if (slot is null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "No booking slot was found with that id.", 404);
+                "No booking slot was found with that id.",
+                404);
         }
 
         if (slot.Status == SlotStatus.Deactivated)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "This booking slot is already deactivated.", 409);
+                "Availability cannot be changed while the slot is deactivated.",
+                409);
         }
 
-        // A slot cannot be switched off while a prosumer still holds a booking on it.
-        if (await _reservationService.HasActiveReservationsForSlotAsync(id))
+        var updatedAt = DateTime.UtcNow;
+
+        var update = Builders<EnergyBookingSlot>.Update
+            .Set(s => s.IsAvailable, request.IsAvailable)
+            .Set(s => s.UpdatedAt, updatedAt);
+
+        await _slots.UpdateOneAsync(
+            s => s.Id == slot.Id,
+            update);
+
+        slot.IsAvailable = request.IsAvailable;
+        slot.UpdatedAt = updatedAt;
+
+        return ServiceResult<SlotResponse>.Ok(
+            SlotResponse.FromSlot(slot));
+    }
+
+    /// Deactivates a booking slot and makes it unavailable.
+    public async Task<ServiceResult<SlotResponse>> DeactivateAsync(
+        string id)
+    {
+        if (!ObjectId.TryParse(id, out _))
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "Invalid slot id.",
+                400);
+        }
+
+        var slot = await FindSlotAsync(id);
+
+        if (slot is null)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "No booking slot was found with that id.",
+                404);
+        }
+
+        if (slot.Status == SlotStatus.Deactivated)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                "This booking slot is already deactivated.",
+                409);
+        }
+
+        // A slot cannot be switched off while a prosumer
+        // still has an active reservation for it.
+        if (await _reservationService
+            .HasActiveReservationsForSlotAsync(id))
         {
             return ServiceResult<SlotResponse>.Fail(
                 "This slot has an active reservation. Cancel the reservation before deactivating the slot.",
@@ -350,12 +389,14 @@ public class SlotService : ISlotService
 
     /// Reactivates a previously deactivated booking slot.
     /// Availability is not automatically changed.
-    public async Task<ServiceResult<SlotResponse>> ActivateAsync(string id)
+    public async Task<ServiceResult<SlotResponse>> ActivateAsync(
+        string id)
     {
         if (!ObjectId.TryParse(id, out _))
         {
             return ServiceResult<SlotResponse>.Fail(
-                "Invalid slot id.", 400);
+                "Invalid slot id.",
+                400);
         }
 
         var slot = await FindSlotAsync(id);
@@ -363,13 +404,15 @@ public class SlotService : ISlotService
         if (slot is null)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "No booking slot was found with that id.", 404);
+                "No booking slot was found with that id.",
+                404);
         }
 
         if (slot.Status == SlotStatus.Active)
         {
             return ServiceResult<SlotResponse>.Fail(
-                "This booking slot is already active.", 409);
+                "This booking slot is already active.",
+                409);
         }
 
         var station = await FindStationAsync(slot.StationId);
@@ -388,6 +431,21 @@ public class SlotService : ISlotService
                 409);
         }
 
+        // Re-check the station operating-hours rule before activation.
+        var operatingHoursError = ValidateSlotOperatingHours(
+            station,
+            slot.StartTime,
+            slot.EndTime);
+
+        if (operatingHoursError is not null)
+        {
+            return ServiceResult<SlotResponse>.Fail(
+                operatingHoursError,
+                400);
+        }
+
+        // A deactivated slot must not become active if another
+        // active slot now occupies the same time period.
         var hasOverlap = await HasOverlappingSlotAsync(
             slot.StationId,
             slot.StartTime,
@@ -434,7 +492,7 @@ public class SlotService : ISlotService
             .FirstOrDefaultAsync();
     }
 
-    /// Validates booking slot information supplied by the client.
+    /// Validates basic booking slot information supplied by the client.
     private static string? ValidateSlot(
         string slotName,
         DateTime startTime,
@@ -453,14 +511,14 @@ public class SlotService : ISlotService
         return null;
     }
 
-    
-    /// Validates that the booking slot falls within the station's daily operating hours.
+    /// Validates that a booking slot falls within the station's
+    /// Sri Lanka local daily operating hours.
     private static string? ValidateSlotOperatingHours(
         SolarStation station,
         DateTime startTime,
         DateTime endTime)
     {
-        // Convert the station's stored "HH:mm" strings into TimeSpan values.
+        // Station operating hours are stored as local "HH:mm" values.
         if (!TimeSpan.TryParseExact(
                 station.OperatingStartTime,
                 @"hh\:mm",
@@ -479,37 +537,96 @@ public class SlotService : ISlotService
             return "The station operating end time is invalid.";
         }
 
-        // This implementation assumes the station operates within one calendar day.
+        // Current system design supports operating periods
+        // that start and finish on the same calendar day.
         if (operatingStart >= operatingEnd)
         {
             return "The station operating hours are invalid.";
         }
 
-        // A booking slot must start and finish on the same date.
-        if (startTime.Date != endTime.Date)
+        /*
+         * Slot timestamps represent actual points in time and are stored
+         * by MongoDB in UTC. Station operating hours such as 06:00-20:00
+         * are Sri Lanka local clock times.
+         *
+         * Convert the slot timestamps to Sri Lanka time before comparing
+         * their TimeOfDay values with the station operating hours.
+         */
+        var localStart = ToSriLankaTime(startTime);
+        var localEnd = ToSriLankaTime(endTime);
+
+        // The slot must start and finish on the same Sri Lanka date.
+        if (localStart.Date != localEnd.Date)
         {
             return "A booking slot must start and end on the same date.";
         }
-    
 
-        var slotStart = startTime.TimeOfDay;
-        var slotEnd = endTime.TimeOfDay;
+        var slotStart = localStart.TimeOfDay;
+        var slotEnd = localEnd.TimeOfDay;
 
         // The complete slot must be inside the station's operating hours.
-        if (slotStart < operatingStart || slotEnd > operatingEnd)
+        if (slotStart < operatingStart ||
+            slotEnd > operatingEnd)
         {
             return $"Booking slot must be within the station operating hours " +
-               $"{station.OperatingStartTime} to {station.OperatingEndTime}.";
+                   $"{station.OperatingStartTime} to " +
+                   $"{station.OperatingEndTime}.";
         }
 
         return null;
     }
 
+    /// Converts an API/MongoDB timestamp to Sri Lanka local time. 
+    private static DateTime ToSriLankaTime(DateTime dateTime)
+    {
+        var utcTime = ToUtc(dateTime);
+
+        return TimeZoneInfo.ConvertTimeFromUtc(
+            utcTime,
+            GetSriLankaTimeZone());
+    }
+
+    /// Normalizes a DateTime value to UTC.
+    /// MongoDB timestamps returned without a DateTime kind are treated as UTC.
+    private static DateTime ToUtc(DateTime dateTime)
+    {
+        if (dateTime.Kind == DateTimeKind.Utc)
+        {
+            return dateTime;
+        }
+
+        if (dateTime.Kind == DateTimeKind.Local)
+        {
+            return dateTime.ToUniversalTime();
+        }
+
+        return DateTime.SpecifyKind(
+            dateTime,
+            DateTimeKind.Utc);
+    }
+
+    /// Gets the Sri Lanka time zone.
+    /// Asia/Colombo is normally available on Linux/macOS.
+    /// Sri Lanka Standard Time is the Windows time-zone identifier.
+    private static TimeZoneInfo GetSriLankaTimeZone()
+    {
+        try
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(
+                "Asia/Colombo");
+        }
+        catch (TimeZoneNotFoundException)
+        {
+            return TimeZoneInfo.FindSystemTimeZoneById(
+                "Sri Lanka Standard Time");
+        }
+    }
+
     /// Checks whether the requested time overlaps another active slot
     /// belonging to the same solar station.
     ///
-    /// When updating a slot, excludeSlotId is used so that the slot
-    /// does not conflict with itself.
+    /// During an update, excludeSlotId prevents the current slot
+    /// from conflicting with itself.
     private async Task<bool> HasOverlappingSlotAsync(
         string stationId,
         DateTime startTime,
@@ -524,6 +641,7 @@ public class SlotService : ISlotService
             Builders<EnergyBookingSlot>.Filter.Eq(
                 s => s.Status,
                 SlotStatus.Active),
+
             Builders<EnergyBookingSlot>.Filter.Lt(
                 s => s.StartTime,
                 endTime),
@@ -533,7 +651,6 @@ public class SlotService : ISlotService
                 startTime)
         );
 
-        // During update, ignore the slot that is currently being edited.
         if (!string.IsNullOrWhiteSpace(excludeSlotId))
         {
             filter = Builders<EnergyBookingSlot>.Filter.And(
