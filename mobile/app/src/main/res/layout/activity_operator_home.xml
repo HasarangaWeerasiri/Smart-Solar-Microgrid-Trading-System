@@ -7,40 +7,54 @@
     Description: Home screen layout for a Grid Operator. Shows who is signed in and a
                  logout button. The QR scanner and map are added here later.
                  (button_scan_qr added by Member D, 2026-09-28.)
+                 (Restyled 2026-09-29: greeting header card, gradient primary action.)
 -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/color_bg"
     android:orientation="vertical"
     android:padding="24dp">
 
-    <TextView
-        android:id="@+id/text_welcome"
-        android:layout_width="wrap_content"
+    <LinearLayout
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textSize="20sp"
-        android:textStyle="bold" />
+        android:background="@drawable/bg_gradient_button"
+        android:elevation="6dp"
+        android:orientation="vertical"
+        android:padding="20dp">
 
-    <TextView
-        android:id="@+id/text_role"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:textSize="14sp" />
+        <TextView
+            android:id="@+id/text_welcome"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:fontFamily="@font/poppins_bold"
+            android:textColor="@color/text_primary"
+            android:textSize="20sp" />
+
+        <TextView
+            android:id="@+id/text_role"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:textColor="#E0E7FF"
+            android:textSize="13sp" />
+    </LinearLayout>
 
     <TextView
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
         android:text="@string/operator_sections"
-        android:textSize="14sp" />
+        android:textColor="@color/text_secondary"
+        android:textSize="13sp" />
 
     <!-- Member D - QR flow -->
     <Button
         android:id="@+id/button_scan_qr"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
+        android:layout_marginTop="18dp"
         android:text="@string/scan_qr_code"
         android:textAllCaps="false" />
 
@@ -51,6 +65,7 @@
 
     <Button
         android:id="@+id/button_logout"
+        style="@style/Widget.Microgrid.Button.Text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:text="@string/log_out" />

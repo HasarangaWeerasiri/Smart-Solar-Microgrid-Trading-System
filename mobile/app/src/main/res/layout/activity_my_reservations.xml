@@ -10,6 +10,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/color_bg"
     android:fillViewport="true">
 
     <LinearLayout
@@ -28,13 +29,14 @@
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
+                android:fontFamily="@font/poppins_bold"
                 android:text="@string/my_bookings_title"
-                android:textSize="22sp"
-                android:textStyle="bold" />
+                android:textColor="@color/text_primary"
+                android:textSize="22sp" />
 
             <Button
                 android:id="@+id/button_refresh"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/Widget.Microgrid.Button.Text"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="@string/refresh"
