@@ -1,0 +1,192 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: activity_register.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Lakshan
+    Created: 2026-09-23
+    Description: Sign-up screen layout for a prosumer. NIC, name and password are required;
+                 email, phone and address are optional. Scrolls, so the form still works on
+                 a small screen with the keyboard open.
+                 (Restyled 2026-09-29: dark theme, rounded filled inputs, gradient button.)
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/color_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="28dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/register_title"
+            android:textColor="@color/text_primary"
+            android:fontFamily="@font/poppins_bold"
+            android:textSize="22sp" />
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="24dp"
+            android:text="@string/register_subtitle"
+            android:textColor="@color/text_secondary"
+            android:textSize="14sp" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/label_nic"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_nic"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="username"
+            android:hint="@string/hint_nic_format"
+            android:inputType="textCapCharacters"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/label_full_name"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_full_name"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="name"
+            android:hint="@string/hint_full_name"
+            android:inputType="textPersonName"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/label_email_optional"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_email"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="emailAddress"
+            android:hint="@string/hint_email"
+            android:inputType="textEmailAddress"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/label_phone_optional"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_phone"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="phone"
+            android:hint="@string/hint_phone"
+            android:inputType="phone"
+            android:maxLines="1" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/label_address_optional"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_address"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="postalAddress"
+            android:hint="@string/hint_address"
+            android:inputType="textPostalAddress"
+            android:maxLines="2" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:text="@string/label_password"
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
+
+        <EditText
+            android:id="@+id/input_password"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:autofillHints="newPassword"
+            android:hint="@string/hint_password_rule"
+            android:inputType="textPassword"
+            android:maxLines="1" />
+
+        <TextView
+            android:id="@+id/text_error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:padding="8dp"
+            android:textColor="@color/error_text"
+            android:textSize="14sp"
+            android:visibility="gone" />
+
+        <Button
+            android:id="@+id/button_register"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/create_account" />
+
+        <ProgressBar
+            android:id="@+id/progress_register"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="12dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/link_sign_in"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:gravity="center"
+            android:padding="8dp"
+            android:text="@string/have_account_sign_in"
+            android:textColor="@color/brand_cyan"
+            android:fontFamily="@font/poppins_semibold"
+            android:textSize="14sp" />
+
+    </LinearLayout>
+</ScrollView>

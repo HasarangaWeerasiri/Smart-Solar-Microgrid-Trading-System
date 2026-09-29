@@ -1,0 +1,16 @@
+/*
+ * File: index.css
+ * Project: Smart Solar Microgrid Trading System (SE4040)
+ * Author: Lakshan
+ * Created: 2026-09-22
+ * Description: Global stylesheet. Loads Tailwind CSS v4 with a single import, which
+ *              replaces the @tailwind base/components/utilities directives used in v3.
+ */
+
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}

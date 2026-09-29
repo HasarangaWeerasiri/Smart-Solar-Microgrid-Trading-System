@@ -1,0 +1,128 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: activity_prosumer_home.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Lakshan
+    Created: 2026-09-22
+    Description: Home screen layout for a solar prosumer. Shows who is signed in, read from
+                 the local SQLite session, and a logout button.
+                 (button_dashboard added by Member D, 2026-09-28.)
+                 (Restyled 2026-09-29: greeting header card, gradient primary action, outlined
+                 secondary actions.)
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/color_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/bg_gradient_button"
+            android:elevation="6dp"
+            android:orientation="vertical"
+            android:padding="20dp">
+
+            <TextView
+                android:id="@+id/text_welcome"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:fontFamily="@font/poppins_bold"
+                android:textColor="@color/text_primary"
+                android:textSize="20sp" />
+
+            <TextView
+                android:id="@+id/text_nic"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:textColor="#E0E7FF"
+                android:textSize="13sp" />
+
+            <TextView
+                android:id="@+id/text_role"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:textColor="#E0E7FF"
+                android:textSize="13sp" />
+        </LinearLayout>
+
+        <TextView
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:text="@string/prosumer_sections"
+            android:textColor="@color/text_secondary"
+            android:textSize="13sp" />
+
+        <!-- IT23245556 - Energy reservations -->
+        <Button
+            android:id="@+id/button_book_slot"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="18dp"
+            android:text="@string/book_energy_slot"
+            android:textAllCaps="false" />
+
+        <Button
+            android:id="@+id/button_my_bookings"
+            style="@style/Widget.Microgrid.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/my_bookings"
+            android:textAllCaps="false" />
+
+        <!-- Member D - Dashboard: summary tiles, current/history tabs, search and date filter. -->
+        <Button
+            android:id="@+id/button_dashboard"
+            style="@style/Widget.Microgrid.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/dashboard"
+            android:textAllCaps="false" />
+
+        <!-- NEW: Nearby Grid Nodes -->
+        <Button
+            android:id="@+id/button_nearby_nodes"
+            style="@style/Widget.Microgrid.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="Nearby Grid Nodes"
+            android:textAllCaps="false" />
+
+        <!-- Prosumer's own account: edit details and request deactivation. -->
+        <Button
+            android:id="@+id/button_profile"
+            style="@style/Widget.Microgrid.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/my_profile"
+            android:textAllCaps="false" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:minHeight="32dp" />
+
+        <Button
+            android:id="@+id/button_logout"
+            style="@style/Widget.Microgrid.Button.Text"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="@string/log_out" />
+
+    </LinearLayout>
+</ScrollView>

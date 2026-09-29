@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: cancel_button_text.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: IT23245556 Hasaranga Weerasiri
+    Created: 2026-09-26
+    Description: Text colour for the "Cancel booking" button: red while it can be pressed, grey
+                 when it is disabled (for example less than 12 hours before the booking).
+-->
+<selector xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:color="@color/muted_text" android:state_enabled="false" />
+    <item android:color="@color/error_text" />
+</selector>

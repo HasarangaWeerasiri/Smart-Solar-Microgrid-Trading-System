@@ -215,6 +215,8 @@ publish/
 # Note: Comment the next line if you want to checkin your web deploy settings,
 # but database connection strings (with potential passwords) will be unencrypted
 *.pubxml
+# IISProfile.pubxml is a folder-publish profile only (no connection strings), so it is checked in.
+!api/**/Properties/PublishProfiles/IISProfile.pubxml
 *.publishproj
 
 # Microsoft Azure Web App publish settings. Comment the next line if you want to

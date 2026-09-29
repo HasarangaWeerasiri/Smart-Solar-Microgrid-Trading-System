@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: item_station.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Member D
+    Created: 2026-09-28
+    Description: One solar microgrid station card in the Nearby Grid Nodes list.
+                 (Restyled 2026-09-29: rounded dark card with border and shadow.)
+-->
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_marginBottom="14dp"
+    android:background="@drawable/bg_input_field"
+    android:elevation="4dp"
+    android:orientation="vertical"
+    android:padding="18dp">
+
+    <TextView
+        android:id="@+id/text_station_name"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="@color/text_primary"
+        android:fontFamily="@font/poppins_semibold"
+        android:textSize="18sp" />
+
+    <TextView
+        android:id="@+id/text_station_address"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/text_station_capacity"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/text_station_hours"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/text_secondary"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/text_station_status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="6dp"
+        android:textColor="@color/brand_teal"
+        android:fontFamily="@font/poppins_semibold"
+        android:textSize="14sp" />
+
+    <Button
+        android:id="@+id/button_station_details"
+        style="@style/Widget.Microgrid.Button.Outline"
+        android:layout_width="wrap_content"
+        android:layout_height="44dp"
+        android:layout_marginTop="12dp"
+        android:paddingStart="20dp"
+        android:paddingEnd="20dp"
+        android:text="View Details"
+        android:textAllCaps="false"
+        android:textSize="13sp" />
+
+</LinearLayout>

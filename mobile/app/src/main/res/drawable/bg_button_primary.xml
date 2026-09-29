@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: bg_button_primary.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: UI redesign
+    Created: 2026-09-29
+    Description: Ripple feedback layered over the gradient button background.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#33FFFFFF">
+    <item android:drawable="@drawable/bg_gradient_button" />
+</ripple>

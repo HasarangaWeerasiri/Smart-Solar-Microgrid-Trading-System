@@ -1,0 +1,6853 @@
+{
+	"info": {
+		"_postman_id": "9f3c21ae-5b7d-4f1e-8a6c-2d4b71e0c913",
+		"name": "Smart Solar Microgrid Trading System - API",
+		"description": "API tests for the Smart Solar Microgrid Trading System (SLIIT SE4040).\n\n## How to use\n\n1. Start the API: `cd api/Microgrid.Api` then `dotnet run`\n2. Check the `baseUrl` variable matches where it is listening (default `http://localhost:5288`)\n3. Open the **Auth - Success** folder and run **1. Login - Backoffice** first. It saves the token automatically, so every later request is already authorised.\n4. Or press **Run** on the collection to run everything in order.\n\nEvery request has tests attached, so you can see pass/fail instead of reading the JSON yourself.\n\n## Folders\n\n- **Health** - checks the API is up and MongoDB is reachable\n- **Auth - Success** - the happy path: login, who am I, Backoffice-only access\n- **Auth - Failure** - wrong password, missing token, bad input\n- **Auth - Role and Status** - needs extra test accounts, see the folder description\n- **C - Energy reservations** - book, change, cancel and approve; 7 day, 12 hour and station deactivation rules. Self-contained, run it as a folder\n\nBatch F1 covers login only. User management endpoints arrive in batch A2.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Health",
+			"item": [
+				{
+					"name": "Ping - API and MongoDB",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"MongoDB is connected\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"connected\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/ping",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"ping"
+							]
+						},
+						"description": "Confirms the API is running and that it can reach MongoDB Atlas. Run this first - if it fails, nothing else will work."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Success",
+			"item": [
+				{
+					"name": "1. Login - Backoffice (saves token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"A token was returned\", function () {",
+									"    pm.expect(data.token).to.be.a(\"string\");",
+									"    pm.expect(data.token.length).to.be.above(20);",
+									"});",
+									"",
+									"pm.test(\"Role is Backoffice\", function () {",
+									"    pm.expect(data.role).to.eql(\"Backoffice\");",
+									"});",
+									"",
+									"pm.test(\"Account is Active\", function () {",
+									"    pm.expect(data.status).to.eql(\"Active\");",
+									"});",
+									"",
+									"pm.test(\"No password is ever sent back\", function () {",
+									"    pm.expect(pm.response.text()).to.not.include(\"PasswordHash\");",
+									"    pm.expect(pm.response.text()).to.not.include(\"password\");",
+									"});",
+									"",
+									"// Save the token so the other requests can use it automatically.",
+									"pm.collectionVariables.set(\"token\", data.token);",
+									"pm.collectionVariables.set(\"adminUserId\", data.userId);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{backofficeEmail}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in the Backoffice user created automatically at startup.\n\nStaff log in with their email. Prosumers log in with their NIC - the same field and the same endpoint handles both.\n\nThe token is saved into the `token` collection variable, so you do not need to copy and paste it anywhere."
+					},
+					"response": []
+				},
+				{
+					"name": "2. Me - who am I",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"Returns the logged in user\", function () {",
+									"    pm.expect(data.role).to.eql(\"Backoffice\");",
+									"    pm.expect(data.email).to.eql(pm.collectionVariables.get(\"backofficeEmail\"));",
+									"});",
+									"",
+									"pm.test(\"NIC is null for staff\", function () {",
+									"    pm.expect(data.nic).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "Reads the user id out of the token and returns that user's details.\n\nBoth clients use this to restore a session and to show the user's name. `nic` is null here because this is a staff account, not a prosumer."
+					},
+					"response": []
+				},
+				{
+					"name": "3. Admin check - Backoffice token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Backoffice access confirmed\", function () {",
+									"    pm.expect(pm.response.json().message).to.include(\"confirmed\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "A Backoffice-only endpoint, protected with `[Authorize(Roles = Roles.Backoffice)]`.\n\nThe role is read from the signed token, not from anything the client sends, so a client cannot promote itself."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Failure",
+			"item": [
+				{
+					"name": "4. Login - wrong password (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Message does not reveal whether the user exists\", function () {",
+									"    pm.expect(pm.response.json().error).to.eql(\"Invalid login details.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{backofficeEmail}}\",\n    \"password\": \"ThisIsWrong123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A real user with the wrong password. Returns 401 with a general message."
+					},
+					"response": []
+				},
+				{
+					"name": "5. Login - unknown user (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Same message as a wrong password\", function () {",
+									"    pm.expect(pm.response.json().error).to.eql(\"Invalid login details.\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"nobody@nowhere.lk\",\n    \"password\": \"AnyPassword123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A user that does not exist.\n\nImportant: the message is identical to the wrong-password case. If it said \"no such user\", an attacker could use the endpoint to find out which accounts exist."
+					},
+					"response": []
+				},
+				{
+					"name": "6. Login - empty body (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"",
+									"pm.test(\"Both fields are reported as required\", function () {",
+									"    var errors = pm.response.json().errors;",
+									"    pm.expect(errors).to.have.property(\"Identifier\");",
+									"    pm.expect(errors).to.have.property(\"Password\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "No details at all. The `[Required]` attributes on LoginRequest reject this before any service code runs."
+					},
+					"response": []
+				},
+				{
+					"name": "7. Me - no token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/me",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"me"
+							]
+						},
+						"description": "A protected endpoint called with no Authorization header. The JWT middleware rejects it before the controller runs."
+					},
+					"response": []
+				},
+				{
+					"name": "8. Admin check - no token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"auth": {
+							"type": "noauth"
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "No token at all. 401 means \"I do not know who you are\"."
+					},
+					"response": []
+				},
+				{
+					"name": "9. Admin check - invalid token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer not.a.real.token"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "A made-up token. The signature does not match the server's secret key, so it is rejected. This proves a client cannot write its own token."
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "Auth - Role and Status",
+			"item": [
+				{
+					"name": "10. Login - GridOperator (saves operatorToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"",
+									"pm.test(\"Role is GridOperator\", function () {",
+									"    pm.expect(data.role).to.eql(\"GridOperator\");",
+									"});",
+									"",
+									"pm.collectionVariables.set(\"operatorToken\", data.token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{operatorEmail}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Logs in a Grid Operator and saves that token separately, so the next request can prove role blocking."
+					},
+					"response": []
+				},
+				{
+					"name": "11. Admin check - GridOperator token (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/admin-check",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"admin-check"
+							]
+						},
+						"description": "This is the key role test.\n\n403 Forbidden, not 401. The token is perfectly valid and the server knows exactly who this is - but a Grid Operator is not allowed into a Backoffice-only function."
+					},
+					"response": []
+				},
+				{
+					"name": "12. Login - Pending prosumer by NIC (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Explains it is waiting for approval\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{pendingNic}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Business rule 4: a new prosumer registration starts as Pending and cannot log in until Backoffice approves it.\n\nNote this prosumer logs in with a NIC, not an email. The password was correct, so the answer is 403 and not 401."
+					},
+					"response": []
+				},
+				{
+					"name": "13. Login - Deactivated prosumer by NIC (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"",
+									"pm.test(\"Tells the user to contact Backoffice\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Backoffice\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{deactivatedNic}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "Business rule 3: a deactivated account cannot log in, and only a Backoffice officer can reactivate it. The error message says exactly that."
+					},
+					"response": []
+				},
+				{
+					"name": "14. Login - Pending prosumer, wrong password (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401, not 403\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});",
+									"",
+									"pm.test(\"Account status is not leaked\", function () {",
+									"    var error = pm.response.json().error;",
+									"    pm.expect(error).to.eql(\"Invalid login details.\");",
+									"    pm.expect(error).to.not.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{pendingNic}}\",\n    \"password\": \"ThisIsWrong123\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"description": "A Pending account with the wrong password gives 401, not 403.\n\nThis proves the password is checked first. The account status is only revealed to someone who already proved they own the account."
+					},
+					"response": []
+				}
+			],
+			"description": "These four requests need three extra accounts that no endpoint can create yet - user management is batch A2.\n\nUntil then, ask the team to add them directly, or skip this folder. The accounts used here are:\n\n| Id / NIC | Role | Status |\n| --- | --- | --- |\n| TESTOP001 (testop@microgrid.lk) | GridOperator | Active |\n| TESTPEND002 | Prosumer | Pending |\n| TESTDEACT003 | Prosumer | Deactivated |\n\nAll three use the same password as the seeded admin."
+		},
+		{
+			"name": "A2a - Staff management (Backoffice only)",
+			"description": "Staff accounts: Backoffice and Grid Operator. Every endpoint here requires a Backoffice token.\n\nRun **Auth - Success > 1. Login - Backoffice** first so `{{token}}` and `{{adminUserId}}` are set. The GridOperator test needs `{{operatorToken}}` from the Auth - Role and Status folder.\n\nEach run creates one new Grid Operator with a unique email (there is no delete endpoint by design; accounts are deactivated, not deleted).",
+			"item": [
+				{
+					"name": "A2a-01 Create GridOperator (201, saves staffUserId)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A unique email on every run, so the collection can be re-run without a 409.",
+									"pm.collectionVariables.set(\"staffEmail\", \"operator.\" + Date.now() + \"@microgrid.lk\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"pm.test(\"Role is GridOperator and account is Active\", function () {",
+									"    pm.expect(data.role).to.eql(\"GridOperator\");",
+									"    pm.expect(data.status).to.eql(\"Active\");",
+									"});",
+									"pm.test(\"No password or hash is returned\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"password\");",
+									"});",
+									"pm.collectionVariables.set(\"staffUserId\", data.userId);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Backoffice creates a Grid Operator. Staff accounts start Active because a Backoffice officer created them.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator\",\n    \"email\": \"{{staffEmail}}\",\n    \"password\": \"Operator@123\",\n    \"role\": \"GridOperator\",\n    \"phone\": \"0771234567\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-02 Create - same email again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Emails must be unique across all accounts.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Duplicate Operator\",\n    \"email\": \"{{staffEmail}}\",\n    \"password\": \"Operator@123\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-03 Create - role Prosumer (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "The staff endpoint only accepts Backoffice or GridOperator. Prosumers register through /api/prosumers.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Wrong Role\",\n    \"email\": \"wrongrole@microgrid.lk\",\n    \"password\": \"Operator@123\",\n    \"role\": \"Prosumer\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-04 Create - weak password (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Passwords must be at least 8 characters (PasswordPolicy).",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Weak Password\",\n    \"email\": \"weakpass@microgrid.lk\",\n    \"password\": \"short\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-05 List staff (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Only staff roles are listed\", function () {",
+									"    pm.response.json().forEach(function (u) { pm.expect([\"Backoffice\", \"GridOperator\"]).to.include(u.role); });",
+									"});",
+									"pm.test(\"No password hash anywhere\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"passwordhash\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "All staff accounts, newest first. Prosumers are never included."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-06 List - filter role=GridOperator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Every result is a GridOperator\", function () {",
+									"    pm.response.json().forEach(function (u) { pm.expect(u.role).to.eql(\"GridOperator\"); });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users?role=GridOperator",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							],
+							"query": [
+								{
+									"key": "role",
+									"value": "GridOperator"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-07 Get staff by id (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Returns the created account\", function () {",
+									"    pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"staffUserId\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-08 Get - prosumer id through staff endpoint (404)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 404\", function () {",
+									"    pm.response.to.have.status(404);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"200012345678"
+							]
+						},
+						"description": "Staff endpoints cannot read or change prosumer accounts, even by id."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-09 Update name and phone (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name was changed\", function () {",
+									"    pm.expect(pm.response.json().fullName).to.eql(\"Postman Test Operator Updated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						},
+						"description": "Leave newPassword out to keep the current password.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator Updated\",\n    \"email\": \"{{staffEmail}}\",\n    \"role\": \"GridOperator\",\n    \"phone\": \"0779999999\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-10 Update - email already used (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Postman Test Operator Updated\",\n    \"email\": \"{{backofficeEmail}}\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-11 Backoffice changes OWN role (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{adminUserId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{adminUserId}}"
+							]
+						},
+						"description": "Guard: a Backoffice officer cannot remove their own admin access.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"System Administrator\",\n    \"email\": \"{{backofficeEmail}}\",\n    \"role\": \"GridOperator\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-12 Deactivate the operator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is Deactivated\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Deactivated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"deactivate"
+							]
+						},
+						"description": "A deactivated account can no longer log in (login returns 403)."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-13 Deactivate again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-14 Reactivate the operator (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is Active\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{staffUserId}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{staffUserId}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-15 Backoffice deactivates THEMSELVES (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users/{{adminUserId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users",
+								"{{adminUserId}}",
+								"deactivate"
+							]
+						},
+						"description": "Guard: prevents the last Backoffice officer from locking everyone out."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-16 GridOperator calls staff list (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"description": "Only Backoffice may manage users. Needs {{operatorToken}}."
+					},
+					"response": []
+				},
+				{
+					"name": "A2a-17 No token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "A2b - Prosumer accounts",
+			"description": "Prosumer registration, profile and approval. The NIC is the account id.\n\nRun **Auth - Success > 1. Login - Backoffice** first for `{{token}}`. The last check needs `{{operatorToken}}` from the Auth - Role and Status folder.\n\nEach run registers a prosumer with a fresh NIC, so the folder can be run repeatedly. Accounts are deactivated, never deleted, which is why old test prosumers stay in the list.",
+			"item": [
+				{
+					"name": "A2b-01 Register prosumer (201 Pending, saves prosumerNic)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A fresh 12-digit NIC each run so the folder can be re-run.",
+									"var nic = String(Date.now()).slice(0, 12);",
+									"pm.collectionVariables.set(\"prosumerNic\", nic);",
+									"pm.collectionVariables.set(\"prosumerEmail\", \"prosumer.\" + nic + \"@example.lk\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"var data = pm.response.json();",
+									"pm.test(\"Starts Pending - self-registration needs approval\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});",
+									"pm.test(\"Role is Prosumer and the NIC is the account id\", function () {",
+									"    pm.expect(data.role).to.eql(\"Prosumer\");",
+									"    pm.expect(data.userId).to.eql(data.nic);",
+									"});",
+									"pm.test(\"No password is returned\", function () {",
+									"    pm.expect(pm.response.text().toLowerCase()).to.not.include(\"password\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Open to anyone: a new prosumer has no account yet, so cannot have a token. Business rule 4: registration starts Pending.",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{prosumerNic}}\",\n    \"fullName\": \"Sunil Fernando\",\n    \"password\": \"{{prosumerPassword}}\",\n    \"email\": \"{{prosumerEmail}}\",\n    \"phone\": \"0712223333\",\n    \"address\": \"5 Lake Road, Kandy\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-02 Register - same NIC again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "The NIC is the MongoDB _id, so the database itself blocks a duplicate.",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{prosumerNic}}\",\n    \"fullName\": \"Copy Cat\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-03 Register - invalid NIC (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Must be 9 digits + V/X (old format) or 12 digits (new format).",
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"12345\",\n    \"fullName\": \"Bad Nic\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-04 Register - weak password (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"199912345678\",\n    \"fullName\": \"Weak Pass\",\n    \"password\": \"short\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-05 Pending prosumer cannot log in yet (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});",
+									"pm.test(\"Says it is waiting for approval\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"approval\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{prosumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-06 Pending activations list (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Every row is Pending\", function () {",
+									"    pm.response.json().forEach(function (p) { pm.expect(p.status).to.eql(\"Pending\"); });",
+									"});",
+									"pm.test(\"Includes the prosumer just registered\", function () {",
+									"    var nic = pm.collectionVariables.get(\"prosumerNic\");",
+									"    pm.expect(pm.response.json().map(function (p) { return p.userId; })).to.include(nic);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers?status=Pending",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Pending"
+								}
+							]
+						},
+						"description": "This is what the web app's pending activations page calls."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-07 Backoffice approves the registration (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Now Active\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-08 Prosumer logs in (200, saves prosumerToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"prosumerToken\", pm.response.json().token);",
+									"pm.test(\"Prosumers log in with their NIC\", function () {",
+									"    pm.expect(pm.response.json().role).to.eql(\"Prosumer\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{prosumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-09 Prosumer reads OWN profile (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-10 Prosumer reads ANOTHER prosumer (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"200012345678"
+							]
+						},
+						"description": "A prosumer may only see their own profile. Needs another prosumer to exist (NIC 200012345678)."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-11 Prosumer edits OWN profile (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name changed but the NIC did not\", function () {",
+									"    pm.expect(pm.response.json().fullName).to.eql(\"Sunil Fernando Jr\");",
+									"    pm.expect(pm.response.json().userId).to.eql(pm.collectionVariables.get(\"prosumerNic\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}"
+							]
+						},
+						"description": "There is no nic field in the request body, so the primary key can never change.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Sunil Fernando Jr\",\n    \"email\": \"{{prosumerEmail}}\",\n    \"phone\": \"0719998888\",\n    \"address\": \"7 Hill Street, Kandy\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-12 Prosumer edits ANOTHER profile (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/200012345678",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"200012345678"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Hacked Name\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-13 Prosumer lists all prosumers (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "Listing is Backoffice only."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-14 Prosumer deactivates OWN account (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Now Deactivated\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Deactivated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"deactivate"
+							]
+						},
+						"description": "The mobile app's \"request account deactivation\" feature."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-15 Prosumer reactivates THEMSELVES (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{prosumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						},
+						"description": "Business rule 3: only a Backoffice officer can reactivate a deactivated account."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-16 Backoffice reactivates them (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Active again\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-17 Backoffice deactivates a prosumer (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{prosumerNic}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{prosumerNic}}",
+								"deactivate"
+							]
+						},
+						"description": "The web app can also deactivate a prosumer profile."
+					},
+					"response": []
+				},
+				{
+					"name": "A2b-18 GridOperator lists prosumers (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{operatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "C - Energy reservations",
+			"description": "Energy slot reservations (Member C): create, update, cancel and approve, with the 7 day rule (rule 5), the 12 hour rule (rule 6) and the station deactivation block (rule 7).\n\n**Self-contained:** the C-0x/C-1x setup requests create their own Grid Operator, two prosumers, a station and slots, so this folder only needs the API running and the seeded Backoffice account. Run the whole folder with **Run folder**, in order - later requests use ids saved by earlier ones.\n\nThe test stations are open 00:00-23:59 and slots are placed at fixed Sri Lanka clock times, so the folder gives the same result at any time of day (the station operating-hours check never rejects a test slot). Each run adds new test records; nothing is deleted.",
+			"item": [
+				{
+					"name": "C-00 Setup - Login Backoffice (saves token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"token\", pm.response.json().token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{backofficeEmail}}\",\n    \"password\": \"{{seedPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-01 Setup - Create a Grid Operator",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"resOperatorEmail\", \"res.op.\" + Date.now() + \"@microgrid.lk\");"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/users",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"users"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"fullName\": \"Reservation Test Operator\",\n    \"email\": \"{{resOperatorEmail}}\",\n    \"password\": \"Operator@123\",\n    \"role\": \"GridOperator\",\n    \"phone\": \"0771234567\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-02 Setup - Login Grid Operator (saves resOperatorToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"resOperatorToken\", pm.response.json().token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{resOperatorEmail}}\",\n    \"password\": \"Operator@123\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-03 Setup - Register Prosumer One",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"resProsumerNic\", String(100000000000 + Math.floor(Math.random() * 899999999999)));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{resProsumerNic}}\",\n    \"fullName\": \"Prosumer One\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-04 Setup - Backoffice approves Prosumer One",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{resProsumerNic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{resProsumerNic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-05 Setup - Login Prosumer One (saves resProsumerToken)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"resProsumerToken\", pm.response.json().token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{resProsumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-06 Setup - Register Prosumer Two",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"resProsumer2Nic\", String(100000000000 + Math.floor(Math.random() * 899999999999)));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{resProsumer2Nic}}\",\n    \"fullName\": \"Prosumer Two\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-07 Setup - Backoffice approves Prosumer Two",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers/{{resProsumer2Nic}}/activate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers",
+								"{{resProsumer2Nic}}",
+								"activate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-08 Setup - Login Prosumer Two (saves resProsumer2Token)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"resProsumer2Token\", pm.response.json().token);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{resProsumer2Nic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-09 Setup - Create a station (saves resStationId)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resStationId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Reservation Test Hub\",\n    \"address\": \"1 Lake Road, Kandy\",\n    \"latitude\": 7.2906,\n    \"longitude\": 80.6337,\n    \"capacityKwh\": 120,\n    \"operatingStartTime\": \"00:00\",\n    \"operatingEndTime\": \"23:59\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-10 Setup - Slot A, in 2 days",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot A: 10:00 Sri Lanka time, 2 days from today (always within the 7 day rule).",
+									"var start = slAt(2, 10, 0);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotA\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot A (+2 days)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-11 Setup - Slot B, in 3 days",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot B: 10:00 Sri Lanka time, 3 days from today.",
+									"var start = slAt(3, 10, 0);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotB\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot B (+3 days)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-12 Setup - Slot C, in 4 days",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot C: 10:00 Sri Lanka time, 4 days from today.",
+									"var start = slAt(4, 10, 0);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotC\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot C (+4 days)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-13 Setup - Slot Near, about 6 hours away",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// About 6 hours from now: in the future but under 12 hours away, for the 12 hour rule tests.",
+									"// If the 1 hour slot would run past Sri Lanka midnight, start it at 00:05 instead (still under 12 hours away).",
+									"var start = new Date(Date.now() + 6 * 3600000);",
+									"if (slDate(start) !== slDate(new Date(start.getTime() + 3600000 + 60000))) {",
+									"    var sl = new Date(start.getTime() + SL_OFFSET);",
+									"    start = new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + 1, 0, 5) - SL_OFFSET);",
+									"}",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotNear\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot Near (+6 hours)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-14 Setup - Slot Far, in 8 days",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot Far: 10:00 Sri Lanka time, 8 days from today (always beyond the 7 day rule).",
+									"var start = slAt(8, 10, 0);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotFar\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot Far (+8 days)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-15 Setup - Slot Past, 2 hours ago",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// About 2 hours ago, so the slot has already started. If the 1 hour slot would run past Sri Lanka",
+									"// midnight, move it 2 hours earlier so it still starts and ends on the same day (and is still past).",
+									"var start = new Date(Date.now() - 2 * 3600000);",
+									"if (slDate(start) !== slDate(new Date(start.getTime() + 3600000 + 60000))) {",
+									"    start = new Date(start.getTime() - 2 * 3600000);",
+									"}",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resSlotPast\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Slot Past (-2 hours)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-20 Prosumer books slot A (201 Pending, saves resReservationId)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set(\"resReservationId\", data.id);",
+									"pm.test(\"New booking starts Pending\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});",
+									"pm.test(\"Booked for the logged-in prosumer (NIC from the token)\", function () {",
+									"    pm.expect(data.prosumerNic).to.eql(pm.collectionVariables.get(\"resProsumerNic\"));",
+									"});",
+									"pm.test(\"Station and slot names are filled in\", function () {",
+									"    pm.expect(data.stationName).to.eql(\"Reservation Test Hub\");",
+									"    pm.expect(data.slotName).to.eql(\"Slot A (+2 days)\");",
+									"});",
+									"pm.test(\"canModify is true - more than 12 hours away\", function () {",
+									"    pm.expect(data.canModify).to.eql(true);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"description": "The prosumer sends only the slot id. The station and the reservation date/time come from the slot.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotA}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-21 Another prosumer books the SAME slot (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"already reserved\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"already reserved\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"description": "One slot can hold only one active (Pending or Approved) booking.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotA}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-22 Book a slot 8 days away (400, 7 day rule)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"7 days\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"7 days\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"description": "Business rule 5: the reservation date must be within 7 days from now.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotFar}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-23 Book a slot in the past (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"already started\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"already started\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotPast}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-24 Prosumer books for ANOTHER NIC (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotB}}\",\n    \"nic\": \"{{resProsumer2Nic}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-25 Staff books without a NIC (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"NIC is required\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"NIC is required\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotC}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-26 Staff books slot C for Prosumer Two (201, saves resReservation2Id)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resReservation2Id\", pm.response.json().id);",
+									"pm.test(\"Booked for the NIC the staff member gave\", function () {",
+									"    pm.expect(pm.response.json().prosumerNic).to.eql(pm.collectionVariables.get(\"resProsumer2Nic\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"description": "Web app flow: Backoffice or Grid Operator books on a prosumer's behalf.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotC}}\",\n    \"nic\": \"{{resProsumer2Nic}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-30 Prosumer lists reservations (200, own only)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Every booking belongs to the caller\", function () {",
+									"    var nic = pm.collectionVariables.get(\"resProsumer2Nic\");",
+									"    pm.response.json().forEach(function (r) { pm.expect(r.prosumerNic).to.eql(nic); });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-31 Prosumer reads ANOTHER prosumer's booking (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-32 Staff filters Pending at the station (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Two Pending bookings at the test station\", function () {",
+									"    pm.expect(pm.response.json().length).to.eql(2);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?status=Pending&stationId={{resStationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Pending"
+								},
+								{
+									"key": "stationId",
+									"value": "{{resStationId}}"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-33 Unknown status filter (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?status=Bogus",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "status",
+									"value": "Bogus"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-34 No token (401)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401 Unauthorized\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-40 Prosumer tries to approve (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-41 Grid Operator approves (200 Approved)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Status is now Approved, with who and when\", function () {",
+									"    pm.expect(data.status).to.eql(\"Approved\");",
+									"    pm.expect(data.approvedAt).to.be.a(\"string\");",
+									"    pm.expect(data.approvedBy).to.be.a(\"string\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-42 Approve again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-50 Move to a slot someone else holds (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotC}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-51 Move to a slot 8 days away (400, 7 day rule)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"7 days\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"7 days\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotFar}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-52 ANOTHER prosumer moves the booking (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotB}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-53 Prosumer moves approved booking to slot B (200, back to Pending)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Now on slot B\", function () {",
+									"    pm.expect(data.slotId).to.eql(pm.collectionVariables.get(\"resSlotB\"));",
+									"});",
+									"pm.test(\"Back to Pending and the old approval is cleared\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"    pm.expect(data.approvedAt).to.eql(null);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}"
+							]
+						},
+						"description": "Staff approved the old slot, so the new slot must be approved again.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotB}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-54 Slot A is free again - Prosumer Two books it (201)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotA}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-60 Book the slot 6 hours away (201, canModify false)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resNearReservationId\", pm.response.json().id);",
+									"pm.test(\"canModify is false - less than 12 hours away\", function () {",
+									"    pm.expect(pm.response.json().canModify).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotNear}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-61 Cancel 6 hours before (400, 12 hour rule)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"12 hours\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"12 hours\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resNearReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resNearReservationId}}",
+								"cancel"
+							]
+						},
+						"description": "Business rule 6: cancellation needs at least 12 hours' notice."
+					},
+					"response": []
+				},
+				{
+					"name": "C-62 Update 6 hours before (400, 12 hour rule)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"12 hours\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"12 hours\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resNearReservationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resNearReservationId}}"
+							]
+						},
+						"description": "Business rule 6: an update needs at least 12 hours' notice.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resSlotC}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-63 Staff cancel 6 hours before (400, rule applies to staff too)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});",
+									"pm.test(\"Error message mentions \\\"12 hours\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"12 hours\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resNearReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resNearReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-70 ANOTHER prosumer cancels the booking (403)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403 Forbidden\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-71 Prosumer cancels own booking (200 Cancelled)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Status is Cancelled, cancelled by the prosumer\", function () {",
+									"    pm.expect(data.status).to.eql(\"Cancelled\");",
+									"    pm.expect(data.cancelledBy).to.eql(pm.collectionVariables.get(\"resProsumerNic\"));",
+									"    pm.expect(data.canModify).to.eql(false);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-72 Cancel again (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-73 Approve a cancelled booking (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-74 Grid Operator cancels on a prosumer's behalf (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resReservation2Id}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resReservation2Id}}",
+								"cancel"
+							]
+						},
+						"description": "Scenario: cancellations can be made through the app or with the help of a grid operator."
+					},
+					"response": []
+				},
+				{
+					"name": "C-80 Rule 7 setup - second station (saves resStation2Id)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resStation2Id\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Rule 7 Test Hub\",\n    \"address\": \"2 Hill Street, Kandy\",\n    \"latitude\": 7.29,\n    \"longitude\": 80.63,\n    \"capacityKwh\": 80,\n    \"operatingStartTime\": \"00:00\",\n    \"operatingEndTime\": \"23:59\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-81 Rule 7 setup - slot at the second station",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Rule 7 slot: 10:00 Sri Lanka time, 2 days from today, at the second station.",
+									"var start = slAt(2, 10, 0);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resRule7SlotId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStation2Id}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStation2Id}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Rule 7 slot (+2 days)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-82 Rule 7 setup - prosumer books it",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resRule7ReservationId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resRule7SlotId}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-83 Deactivate station WITH an active booking (409, rule 7)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"active reservations\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"active reservations\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStation2Id}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStation2Id}}",
+								"deactivate"
+							]
+						},
+						"description": "Business rule 7: a station cannot be deactivated while it has active reservations."
+					},
+					"response": []
+				},
+				{
+					"name": "C-84 Rule 7 - prosumer cancels the booking (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resRule7ReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resRule7ReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-85 Deactivate station after cancelling (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Station is now Deactivated\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Deactivated\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStation2Id}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStation2Id}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-90 Slot guard setup - slot in 2 days (saves resGuardSlotId)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Guard slot: 14:00-15:00 Sri Lanka time, 2 days from today, at a fixed minute so the",
+									"// 'same time' update below matches exactly. It does not overlap Slot A (10:00) at this station.",
+									"var start = slAt(2, 14, 0);",
+									"var end = new Date(start.getTime() + 3600000);",
+									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
+									"pm.collectionVariables.set(\"resSlotEnd\", end.toISOString());",
+									"// The same slot moved one hour later (15:00-16:00), used to try changing a booked slot's time.",
+									"pm.collectionVariables.set(\"resSlotMovedStart\", new Date(start.getTime() + 3600000).toISOString());",
+									"pm.collectionVariables.set(\"resSlotMovedEnd\", new Date(end.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resGuardSlotId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{resStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{resStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-91 Slot guard setup - prosumer books it",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201 Created\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"resGuardReservationId\", pm.response.json().id);"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{resGuardSlotId}}\"\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-92 Move a BOOKED slot's time (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"active reservation\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"active reservation\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"description": "The reservation copied this slot's time when it was booked, so the time cannot move underneath it.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot\",\n    \"startTime\": \"{{resSlotMovedStart}}\",\n    \"endTime\": \"{{resSlotMovedEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-93 Rename a booked slot, same time (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Name changed, booking untouched\", function () {",
+									"    pm.expect(pm.response.json().slotName).to.eql(\"Guard slot (renamed)\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot (renamed)\",\n    \"startTime\": \"{{resSlotStart}}\",\n    \"endTime\": \"{{resSlotEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-94 Deactivate a BOOKED slot (409)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409 Conflict\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Error message mentions \\\"active reservation\\\"\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"active reservation\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-95 Slot guard - prosumer cancels the booking (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{resGuardReservationId}}/cancel",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{resGuardReservationId}}",
+								"cancel"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-96 Move the slot's time after cancelling (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Guard slot (renamed)\",\n    \"startTime\": \"{{resSlotMovedStart}}\",\n    \"endTime\": \"{{resSlotMovedEnd}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-97 Deactivate the slot after cancelling (200)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/slots/{{resGuardSlotId}}/deactivate",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"slots",
+								"{{resGuardSlotId}}",
+								"deactivate"
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-98 Reserved slots at the test station (200, booked listed, cancelled not)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var ids = pm.response.json();",
+									"pm.test(\"Slot A (booked by Prosumer Two) and Slot Near (booked) are listed\", function () {",
+									"    pm.expect(ids).to.include(pm.collectionVariables.get(\"resSlotA\"));",
+									"    pm.expect(ids).to.include(pm.collectionVariables.get(\"resSlotNear\"));",
+									"});",
+									"pm.test(\"Slot B and the guard slot (their bookings were cancelled) are not listed\", function () {",
+									"    pm.expect(ids).to.not.include(pm.collectionVariables.get(\"resSlotB\"));",
+									"    pm.expect(ids).to.not.include(pm.collectionVariables.get(\"resGuardSlotId\"));",
+									"});",
+									"pm.test(\"Only slot ids come back - nobody's name or NIC\", function () {",
+									"    ids.forEach(function (id) { pm.expect(id).to.be.a(\"string\"); });",
+									"    pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get(\"resProsumer2Nic\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/reserved-slots?stationId={{resStationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"reserved-slots"
+							],
+							"query": [
+								{
+									"key": "stationId",
+									"value": "{{resStationId}}"
+								}
+							]
+						},
+						"description": "Booking screens use this to show slots someone already booked as faded and not selectable. Called with a prosumer token: any logged-in user may ask, because only slot ids are returned."
+					},
+					"response": []
+				},
+				{
+					"name": "C-99 Reserved slots with a bad station id (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/reserved-slots?stationId=not-an-id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"reserved-slots"
+							],
+							"query": [
+								{
+									"key": "stationId",
+									"value": "not-an-id"
+								}
+							]
+						},
+						"description": "The station id is checked by the API before any lookup."
+					},
+					"response": []
+				},
+				{
+					"name": "C-100 List with scope=current (200, every row still open)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var now = Date.now();",
+									"pm.test(\"Every row is Pending/Approved with a slot that has not ended\", function () {",
+									"    data.forEach(function (r) {",
+									"        pm.expect([\"Pending\", \"Approved\"]).to.include(r.status);",
+									"        pm.expect(new Date(r.reservationEnd).getTime()).to.be.above(now);",
+									"    });",
+									"});",
+									"pm.test(\"X-Total-Count header is a number\", function () {",
+									"    pm.expect(Number(pm.response.headers.get(\"X-Total-Count\"))).to.be.a(\"number\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?scope=current&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "scope",
+									"value": "current"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-101 List with scope=history (200, every row finished either way)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var now = Date.now();",
+									"pm.test(\"Every row is Completed/Cancelled, or its slot already ended\", function () {",
+									"    data.forEach(function (r) {",
+									"        var finishedStatus = [\"Completed\", \"Cancelled\"].includes(r.status);",
+									"        var slotEnded = new Date(r.reservationEnd).getTime() <= now;",
+									"        pm.expect(finishedStatus || slotEnded).to.eql(true);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?scope=history&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "scope",
+									"value": "history"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-102 List with a search term (station name, 200, matches only that station)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"At least the bookings made at this station in this run are found\", function () {",
+									"    pm.expect(data.length).to.be.above(0);",
+									"});",
+									"pm.test(\"Every match really is that station (or its prosumer's NIC/name matched instead)\", function () {",
+									"    data.forEach(function (r) {",
+									"        var stationMatches = (r.stationName || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        var nicMatches = (r.prosumerNic || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        var nameMatches = (r.prosumerName || \"\").toLowerCase().indexOf(\"reservation test hub\") !== -1;",
+									"        pm.expect(stationMatches || nicMatches || nameMatches).to.eql(true);",
+									"    });",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?search=Reservation%20Test%20Hub&pageSize=200",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "search",
+									"value": "Reservation Test Hub"
+								},
+								{
+									"key": "pageSize",
+									"value": "200"
+								}
+							]
+						},
+						"description": "\"Reservation Test Hub\" is the station created in C-09. search is case-insensitive and matches prosumer NIC, prosumer name or station name."
+					},
+					"response": []
+				},
+				{
+					"name": "C-103 List with a from/to date range and small pageSize (200, headers match)",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// A wide window covering everything the 7 day rule could ever have booked.",
+									"pm.collectionVariables.set(\"resRangeFrom\", new Date(Date.now() - 86400000).toISOString());",
+									"pm.collectionVariables.set(\"resRangeTo\", new Date(Date.now() + 8 * 86400000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"var from = new Date(pm.collectionVariables.get(\"resRangeFrom\")).getTime();",
+									"var to = new Date(pm.collectionVariables.get(\"resRangeTo\")).getTime();",
+									"pm.test(\"Every row's slot start time is inside the requested range\", function () {",
+									"    data.forEach(function (r) {",
+									"        var start = new Date(r.reservationStart).getTime();",
+									"        pm.expect(start).to.be.at.least(from);",
+									"        pm.expect(start).to.be.at.most(to);",
+									"    });",
+									"});",
+									"pm.test(\"Body respects pageSize and headers report the same paging\", function () {",
+									"    pm.expect(data.length).to.be.at.most(5);",
+									"    pm.expect(pm.response.headers.get(\"X-Page\")).to.eql(\"1\");",
+									"    pm.expect(pm.response.headers.get(\"X-Page-Size\")).to.eql(\"5\");",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations?from={{resRangeFrom}}&to={{resRangeTo}}&page=1&pageSize=5",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							],
+							"query": [
+								{
+									"key": "from",
+									"value": "{{resRangeFrom}}"
+								},
+								{
+									"key": "to",
+									"value": "{{resRangeTo}}"
+								},
+								{
+									"key": "page",
+									"value": "1"
+								},
+								{
+									"key": "pageSize",
+									"value": "5"
+								}
+							]
+						}
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "D - Reservation dashboard & QR",
+			"item": [
+				{
+					"name": "D-00 Setup - Backoffice creates an Active Dash Prosumer (saves dashProsumerNic)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/prosumers",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"prosumers"
+							]
+						},
+						"description": "A Backoffice token on the registration call creates the account Active straight away, skipping the pending-activation step.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"nic\": \"{{dashProsumerNic}}\",\n    \"fullName\": \"Dashboard Test Prosumer\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.collectionVariables.set(\"dashProsumerNic\", String(100000000000 + Math.floor(Math.random() * 899999999999)));"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.test(\"Created Active because a Backoffice token was sent\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Active\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-01 Setup - Login Dash Prosumer (saves dashProsumerToken)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/auth/login",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"auth",
+								"login"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"identifier\": \"{{dashProsumerNic}}\",\n    \"password\": \"{{prosumerPassword}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.collectionVariables.set(\"dashProsumerToken\", pm.response.json().token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-02 Setup - Create a station (saves dashStationId)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Dashboard Test Hub\",\n    \"address\": \"3 Market Street, Kandy\",\n    \"latitude\": 7.2906,\n    \"longitude\": 80.6337,\n    \"capacityKwh\": 100,\n    \"operatingStartTime\": \"06:00\",\n    \"operatingEndTime\": \"20:00\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashStationId\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-03 Setup - Slot 1, in 2 days (saves dashSlot1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{dashStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{dashStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Dash Slot 1 (+2 days)\",\n    \"startTime\": \"{{dashSlot1Start}}\",\n    \"endTime\": \"{{dashSlot1End}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var start = new Date(Date.now() + 2 * 86400000);",
+									"pm.collectionVariables.set(\"dashSlot1Start\", start.toISOString());",
+									"pm.collectionVariables.set(\"dashSlot1End\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashSlot1\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-04 Setup - Slot 2, in 3 days (saves dashSlot2)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/stations/{{dashStationId}}/slots",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"stations",
+								"{{dashStationId}}",
+								"slots"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotName\": \"Dash Slot 2 (+3 days)\",\n    \"startTime\": \"{{dashSlot2Start}}\",\n    \"endTime\": \"{{dashSlot2End}}\",\n    \"isAvailable\": true\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"var start = new Date(Date.now() + 3 * 86400000);",
+									"pm.collectionVariables.set(\"dashSlot2Start\", start.toISOString());",
+									"pm.collectionVariables.set(\"dashSlot2End\", new Date(start.getTime() + 3600000).toISOString());"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"pm.collectionVariables.set(\"dashSlot2\", pm.response.json().id);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-05 Setup - Prosumer books slot 1 (saves dashReservationId, Pending)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{dashSlot1}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set(\"dashReservationId\", data.id);",
+									"pm.test(\"New booking starts Pending\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-06 Setup - Prosumer books slot 2 (saves dashReservation2Id, Pending)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"slotId\": \"{{dashSlot2}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.collectionVariables.set(\"dashReservation2Id\", data.id);",
+									"pm.test(\"New booking starts Pending\", function () {",
+									"    pm.expect(data.status).to.eql(\"Pending\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-07 Setup - Grid Operator approves reservation 1 (200 Approved)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"approve"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Approved\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-10 Prosumer gets own reservation summary (200, own counts only)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"description": "This prosumer has exactly one Pending booking (slot 2) and one Approved booking (slot 1) at this point, so the counts are exact."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Counts match this prosumer's two bookings exactly\", function () {",
+									"    pm.expect(data.pending).to.eql(1);",
+									"    pm.expect(data.approved).to.eql(1);",
+									"    pm.expect(data.completed).to.eql(0);",
+									"    pm.expect(data.cancelled).to.eql(0);",
+									"    pm.expect(data.approvedUpcoming).to.eql(1);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-11 Backoffice gets system-wide reservation summary (200, includes other prosumers too)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"description": "Staff see counts across every prosumer, so exact numbers depend on everything already in the database. Only lower bounds are checked here."
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"System-wide counts are at least as large as this prosumer's own\", function () {",
+									"    pm.expect(data.pending).to.be.at.least(1);",
+									"    pm.expect(data.approved).to.be.at.least(1);",
+									"    pm.expect(data.completed).to.be.at.least(0);",
+									"    pm.expect(data.cancelled).to.be.at.least(0);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-12 No token gets summary (401)",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/summary",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"summary"
+							]
+						},
+						"auth": {
+							"type": "noauth"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-20 Prosumer tries to complete reservation 2 (403, StaffOnly)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-21 Grid Operator completes reservation 2 while still Pending (409)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message explains only an Approved reservation can be completed\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-22 Grid Operator approves reservation 2 (200 Approved)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/approve",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"approve"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Approved\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Approved\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-23 Grid Operator completes reservation 2 (200 Completed)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Status is now Completed, with who and when\", function () {",
+									"    pm.expect(data.status).to.eql(\"Completed\");",
+									"    pm.expect(data.completedAt).to.be.a(\"string\");",
+									"    pm.expect(data.completedBy).to.be.a(\"string\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-24 Grid Operator completes reservation 2 again (409, already Completed)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-30 ANOTHER prosumer requests QR for reservation 1 (403, not the owner)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumer2Token}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-31 Owning prosumer requests QR for reservation 1 (200, saves dashQrToken)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Token and matching reservation id are returned\", function () {",
+									"    pm.expect(data.token).to.be.a(\"string\");",
+									"    pm.expect(data.reservationId).to.eql(pm.collectionVariables.get(\"dashReservationId\"));",
+									"    pm.expect(data.expiresAt).to.be.a(\"string\");",
+									"});",
+									"pm.collectionVariables.set(\"dashQrToken\", data.token);"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-32 Grid Operator requests QR for reservation 1 too (200, staff allowed)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-33 Owning prosumer requests QR for reservation 2 (409, now Completed not Approved)",
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservation2Id}}/qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservation2Id}}",
+								"qr"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message names the current status\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-40 Prosumer calls verify-qr (403, StaffOnly)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{dashProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 403\", function () {",
+									"    pm.response.to.have.status(403);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-41 Grid Operator verifies a malformed token (400)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"not-a-real-token\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-42 Grid Operator verifies dashQrToken with a corrupted signature (401)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrTokenBadSig}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"// Flip the last character of the signature half so the shape stays valid Base64Url",
+									"// but the signature no longer matches the payload.",
+									"var original = pm.collectionVariables.get(\"dashQrToken\");",
+									"var parts = original.split(\".\");",
+									"var signature = parts[1];",
+									"var lastChar = signature.charAt(signature.length - 1);",
+									"var replacement = lastChar === \"A\" ? \"B\" : \"A\";",
+									"var tampered = signature.slice(0, -1) + replacement;",
+									"pm.collectionVariables.set(\"dashQrTokenBadSig\", parts[0] + \".\" + tampered);"
+								]
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 401\", function () {",
+									"    pm.response.to.have.status(401);",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-43 Grid Operator verifies dashQrToken (200, matches reservation 1)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"description": "verify-qr is read-only, so this can be called again after D-44 to prove the reservation itself did not change status yet.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var data = pm.response.json();",
+									"pm.test(\"Returns reservation 1's details, still Approved\", function () {",
+									"    pm.expect(data.reservationId).to.eql(pm.collectionVariables.get(\"dashReservationId\"));",
+									"    pm.expect(data.prosumerNic).to.eql(pm.collectionVariables.get(\"dashProsumerNic\"));",
+									"    pm.expect(data.status).to.eql(\"Approved\");",
+									"    pm.expect(data.stationName).to.eql(\"Dashboard Test Hub\");",
+									"    pm.expect(data.slotName).to.eql(\"Dash Slot 1 (+2 days)\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-44 Grid Operator completes reservation 1 (200 Completed, makes dashQrToken stale)",
+					"request": {
+						"method": "PATCH",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/{{dashReservationId}}/complete",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"{{dashReservationId}}",
+								"complete"
+							]
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"pm.test(\"Status is now Completed\", function () {",
+									"    pm.expect(pm.response.json().status).to.eql(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
+				},
+				{
+					"name": "D-45 Grid Operator verifies the now-stale dashQrToken again (409, current status Completed)",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							},
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resOperatorToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/verify-qr",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"verify-qr"
+							]
+						},
+						"description": "The token's signature is still valid (it was never revoked) and it has not expired, but the reservation it points to has since moved to Completed, so verify-qr correctly refuses it. This is why verify-qr always re-reads the reservation instead of trusting the token alone.",
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"token\": \"{{dashQrToken}}\"\n}"
+						}
+					},
+					"response": [],
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 409\", function () {",
+									"    pm.response.to.have.status(409);",
+									"});",
+									"pm.test(\"Message names the reservation's current status\", function () {",
+									"    pm.expect(pm.response.json().error).to.include(\"Completed\");",
+									"});"
+								]
+							}
+						}
+					]
+				}
+			]
+		}
+	],
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:5288",
+			"type": "string"
+		},
+		{
+			"key": "backofficeEmail",
+			"value": "admin@microgrid.lk",
+			"type": "string"
+		},
+		{
+			"key": "seedPassword",
+			"value": "Admin@123",
+			"type": "string"
+		},
+		{
+			"key": "operatorEmail",
+			"value": "testop@microgrid.lk",
+			"type": "string"
+		},
+		{
+			"key": "pendingNic",
+			"value": "TESTPEND002",
+			"type": "string"
+		},
+		{
+			"key": "deactivatedNic",
+			"value": "TESTDEACT003",
+			"type": "string"
+		},
+		{
+			"key": "token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "operatorToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "adminUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staffUserId",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "staffEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerNic",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerEmail",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerToken",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "prosumerPassword",
+			"value": "Prosumer@123",
+			"type": "string"
+		},
+		{
+			"key": "resOperatorEmail",
+			"value": ""
+		},
+		{
+			"key": "resOperatorToken",
+			"value": ""
+		},
+		{
+			"key": "resProsumerNic",
+			"value": ""
+		},
+		{
+			"key": "resProsumerToken",
+			"value": ""
+		},
+		{
+			"key": "resProsumer2Nic",
+			"value": ""
+		},
+		{
+			"key": "resProsumer2Token",
+			"value": ""
+		},
+		{
+			"key": "resStationId",
+			"value": ""
+		},
+		{
+			"key": "resSlotStart",
+			"value": ""
+		},
+		{
+			"key": "resSlotEnd",
+			"value": ""
+		},
+		{
+			"key": "resSlotA",
+			"value": ""
+		},
+		{
+			"key": "resSlotB",
+			"value": ""
+		},
+		{
+			"key": "resSlotC",
+			"value": ""
+		},
+		{
+			"key": "resSlotNear",
+			"value": ""
+		},
+		{
+			"key": "resSlotFar",
+			"value": ""
+		},
+		{
+			"key": "resSlotPast",
+			"value": ""
+		},
+		{
+			"key": "resReservationId",
+			"value": ""
+		},
+		{
+			"key": "resReservation2Id",
+			"value": ""
+		},
+		{
+			"key": "resNearReservationId",
+			"value": ""
+		},
+		{
+			"key": "resStation2Id",
+			"value": ""
+		},
+		{
+			"key": "resRule7SlotId",
+			"value": ""
+		},
+		{
+			"key": "resRule7ReservationId",
+			"value": ""
+		},
+		{
+			"key": "resSlotMovedStart",
+			"value": ""
+		},
+		{
+			"key": "resSlotMovedEnd",
+			"value": ""
+		},
+		{
+			"key": "resGuardSlotId",
+			"value": ""
+		},
+		{
+			"key": "resGuardReservationId",
+			"value": ""
+		},
+		{
+			"key": "dashProsumerNic",
+			"value": ""
+		},
+		{
+			"key": "dashProsumerToken",
+			"value": ""
+		},
+		{
+			"key": "dashStationId",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1Start",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1End",
+			"value": ""
+		},
+		{
+			"key": "dashSlot1",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2Start",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2End",
+			"value": ""
+		},
+		{
+			"key": "dashSlot2",
+			"value": ""
+		},
+		{
+			"key": "dashReservationId",
+			"value": ""
+		},
+		{
+			"key": "dashReservation2Id",
+			"value": ""
+		},
+		{
+			"key": "dashQrToken",
+			"value": ""
+		},
+		{
+			"key": "dashQrTokenBadSig",
+			"value": ""
+		},
+		{
+			"key": "resRangeFrom",
+			"value": ""
+		},
+		{
+			"key": "resRangeTo",
+			"value": ""
+		}
+	]
+}

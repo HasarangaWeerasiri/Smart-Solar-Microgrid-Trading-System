@@ -1,0 +1,290 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: activity_qr_scanner.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Member D
+    Created: 2026-09-28
+    Description: The operator's QR scanner screen. Exactly one of six groups is visible at a
+                 time (see QrScannerActivity.showState): camera permission needed, scanning,
+                 verifying, verified (with the Complete transfer button), completed, or error.
+-->
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/color_bg"
+    android:fillViewport="true">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="24dp">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="@string/scanner_title"
+            android:textSize="22sp"
+            android:textStyle="bold" />
+
+        <!-- Camera permission needed -->
+        <LinearLayout
+            android:id="@+id/group_permission"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="@string/scanner_camera_permission_rationale"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/button_grant_camera_permission"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/grant_camera_permission"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Scanning: camera preview -->
+        <LinearLayout
+            android:id="@+id/group_scanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <androidx.camera.view.PreviewView
+                android:id="@+id/preview_camera"
+                android:layout_width="match_parent"
+                android:layout_height="420dp" />
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_horizontal"
+                android:text="@string/scanner_hint"
+                android:textColor="@color/muted_text"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Verifying: the scanned code was captured and is being checked -->
+        <LinearLayout
+            android:id="@+id/group_verifying"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <ProgressBar
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:text="@string/scanner_verifying"
+                android:textSize="14sp" />
+        </LinearLayout>
+
+        <!-- Verified: the booking details card and the Complete transfer button -->
+        <LinearLayout
+            android:id="@+id/group_verified"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="16dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="6dp">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+
+                    <TextView
+                        android:id="@+id/value_verify_status"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:paddingStart="12dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="4dp"
+                        android:textSize="13sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:text="@string/label_prosumer"
+                        android:textColor="@color/muted_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_prosumer"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/label_nic"
+                        android:textColor="@color/muted_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_nic"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:fontFamily="monospace"
+                        android:textSize="15sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/label_station"
+                        android:textColor="@color/muted_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_station"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/label_slot"
+                        android:textColor="@color/muted_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_slot"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:text="@string/label_date_time"
+                        android:textColor="@color/muted_text"
+                        android:textSize="12sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_start"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:id="@+id/value_verify_end"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:textSize="16sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <Button
+                android:id="@+id/button_complete_transfer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/complete_transfer"
+                android:textAllCaps="false" />
+
+            <Button
+                android:id="@+id/button_scan_again"
+                style="@style/Widget.Microgrid.Button.Text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="@string/scan_another_code"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Completed: success state -->
+        <LinearLayout
+            android:id="@+id/group_completed"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="48dp"
+            android:gravity="center_horizontal"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/transfer_completed_title"
+                android:textSize="20sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:gravity="center_horizontal"
+                android:text="@string/transfer_completed_message"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/button_scan_next"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="@string/scan_next_code"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+        <!-- Error: a readable message for whichever specific case failed, plus Try again -->
+        <LinearLayout
+            android:id="@+id/group_error"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="24dp"
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/text_scanner_error"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:textColor="@color/error_text"
+                android:textSize="14sp" />
+
+            <Button
+                android:id="@+id/button_try_again"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:text="@string/try_again"
+                android:textAllCaps="false" />
+        </LinearLayout>
+
+    </LinearLayout>
+</ScrollView>

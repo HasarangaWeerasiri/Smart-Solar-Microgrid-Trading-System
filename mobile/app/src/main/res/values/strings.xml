@@ -1,0 +1,79 @@
+<!--
+    File: strings.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: Lakshan
+    Created: 2026-09-22
+    Description: All text shown in the app. Keeping text here instead of in the layouts
+                 means it is written once and can be translated later.
+-->
+<resources>
+    <string name="app_name">Microgrid</string>
+    <string name="app_title">Smart Solar Microgrid</string>
+
+    <!-- Login screen -->
+    <string name="login_subtitle">Prosumer and Grid Operator sign in</string>
+    <string name="label_identifier">NIC or email</string>
+    <string name="hint_identifier">Prosumers use NIC, operators use email</string>
+    <string name="label_password">Password</string>
+    <string name="hint_password">Your password</string>
+    <string name="sign_in">Sign in</string>
+    <string name="signing_in">Signing in…</string>
+
+    <!-- Register screen -->
+    <string name="register_title">Create your account</string>
+    <string name="register_subtitle">Register as a solar prosumer. Your NIC becomes your login and cannot be changed later.</string>
+    <string name="label_nic">NIC</string>
+    <string name="hint_nic_format">9 digits + V/X, or 12 digits</string>
+    <string name="label_full_name">Full name</string>
+    <string name="hint_full_name">Your name as on your NIC</string>
+    <string name="label_email_optional">Email (optional)</string>
+    <string name="hint_email">you@example.lk</string>
+    <string name="label_phone_optional">Phone (optional)</string>
+    <string name="hint_phone">07X XXX XXXX</string>
+    <string name="label_address_optional">Address (optional)</string>
+    <string name="hint_address">Where your solar panels are</string>
+    <string name="hint_password_rule">At least 8 characters</string>
+    <string name="create_account">Create account</string>
+    <string name="registering">Creating account…</string>
+    <string name="register_success_title">Account created</string>
+    <string name="register_success_message">Thank you, %1$s. A Backoffice officer must approve your account before you can sign in. Please try again later.</string>
+    <string name="back_to_sign_in">Back to sign in</string>
+    <string name="have_account_sign_in">Already have an account? Sign in</string>
+    <string name="no_account_register">New prosumer? Create an account</string>
+
+    <!-- Profile screen -->
+    <string name="profile_title">My profile</string>
+    <string name="my_profile">My profile</string>
+    <string name="status_label">Status: %1$s</string>
+    <string name="label_new_password_optional">New password (optional)</string>
+    <string name="hint_keep_password">Leave empty to keep your password</string>
+    <string name="save_changes">Save changes</string>
+    <string name="profile_saved">Profile saved.</string>
+    <string name="cancel">Cancel</string>
+    <string name="deactivate_explainer">If you no longer want to use your account, you can deactivate it. You will be signed out and will not be able to sign in again. Only a Backoffice officer can activate your account after that.</string>
+    <string name="deactivate_account">Deactivate my account</string>
+    <string name="deactivate_title">Deactivate account?</string>
+    <string name="deactivate_message">You will be signed out and will not be able to sign in again. Only a Backoffice officer can activate your account afterwards. Do you want to continue?</string>
+    <string name="deactivate_confirm">Deactivate</string>
+    <string name="deactivate_done">Your account has been deactivated.</string>
+
+    <!-- Errors -->
+    <string name="error_fill_both_fields">Please fill in both fields.</string>
+    <string name="error_fill_required_fields">Please fill in NIC, full name and password.</string>
+    <string name="error_register_failed">Could not create the account. Please try again.</string>
+    <string name="error_full_name_required">Please enter your full name.</string>
+    <string name="error_profile_load_failed">Could not load your profile. Please try again.</string>
+    <string name="error_profile_save_failed">Could not save your profile. Please try again.</string>
+    <string name="error_deactivate_failed">Could not deactivate your account. Please try again.</string>
+    <string name="error_login_failed">Login failed. Please try again.</string>
+    <string name="error_backoffice_use_web">Backoffice accounts use the web application, not the mobile app.</string>
+    <string name="error_local_network_denied">The app needs permission to reach devices on your local network to contact the server. Allow it in Settings &gt; Apps &gt; Microgrid &gt; Permissions, then try again.</string>
+
+    <!-- Home screens -->
+    <string name="welcome_named">Welcome, %1$s</string>
+    <string name="nic_label">NIC: %1$s</string>
+    <string name="role_label">Role: %1$s</string>
+    <string name="log_out">Log out</string>
+    <string name="prosumer_sections">Coming next: reserve an energy slot, view bookings and history, your QR code, and nearby grid nodes on the map.</string>
+    <string name="operator_sections">Coming next: scan a prosumer QR code to finish a transfer, and view nearby stations on the map.</string>
+</resources>
