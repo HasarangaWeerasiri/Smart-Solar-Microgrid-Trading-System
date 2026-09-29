@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    File: bg_button_outline.xml
+    Project: Smart Solar Microgrid Trading System (SE4040)
+    Author: UI redesign
+    Created: 2026-09-29
+    Description: Transparent, rounded, bordered background for secondary buttons, with a subtle
+                 ripple on press.
+-->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android"
+    android:color="#1A6366F1">
+    <item>
+        <shape android:shape="rectangle">
+            <solid android:color="@android:color/transparent" />
+            <stroke
+                android:width="1.5dp"
+                android:color="@color/brand_indigo" />
+            <corners android:radius="28dp" />
+        </shape>
+    </item>
+</ripple>

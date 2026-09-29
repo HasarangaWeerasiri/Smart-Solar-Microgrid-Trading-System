@@ -5,6 +5,8 @@
     Author: IT23245556 Hasaranga Weerasiri
     Created: 2026-09-25
     Description: Colours for the reservation status badge, matching the web app's badges.
+                 muted_text/error_text values updated for the dark theme so they stay readable
+                 on navy surfaces (names unchanged so StatusBadge.kt keeps working).
 -->
 <resources>
     <color name="status_pending_bg">#FFFEF3C7</color>
@@ -15,6 +17,6 @@
     <color name="status_completed_text">#FF075985</color>
     <color name="status_cancelled_bg">#FFE2E8F0</color>
     <color name="status_cancelled_text">#FF334155</color>
-    <color name="error_text">#FFB91C1C</color>
-    <color name="muted_text">#FF64748B</color>
+    <color name="error_text">#FFF87171</color>
+    <color name="muted_text">#FFA5B4CB</color>
 </resources>

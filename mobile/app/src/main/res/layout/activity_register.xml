@@ -7,44 +7,50 @@
     Description: Sign-up screen layout for a prosumer. NIC, name and password are required;
                  email, phone and address are optional. Scrolls, so the form still works on
                  a small screen with the keyboard open.
+                 (Restyled 2026-09-29: dark theme, rounded filled inputs, gradient button.)
 -->
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
+    android:background="@color/color_bg"
     android:fillViewport="true">
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:padding="24dp">
+        android:padding="28dp">
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/register_title"
-            android:textSize="22sp"
-            android:textStyle="bold" />
+            android:textColor="@color/text_primary"
+            android:fontFamily="@font/poppins_bold"
+            android:textSize="22sp" />
 
         <TextView
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
-            android:layout_marginBottom="20dp"
+            android:layout_marginTop="6dp"
+            android:layout_marginBottom="24dp"
             android:text="@string/register_subtitle"
+            android:textColor="@color/text_secondary"
             android:textSize="14sp" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="@string/label_nic"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_nic"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="username"
             android:hint="@string/hint_nic_format"
             android:inputType="textCapCharacters"
@@ -53,15 +59,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:text="@string/label_full_name"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_full_name"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="name"
             android:hint="@string/hint_full_name"
             android:inputType="textPersonName"
@@ -70,15 +78,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:text="@string/label_email_optional"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_email"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="emailAddress"
             android:hint="@string/hint_email"
             android:inputType="textEmailAddress"
@@ -87,15 +97,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:text="@string/label_phone_optional"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_phone"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="phone"
             android:hint="@string/hint_phone"
             android:inputType="phone"
@@ -104,15 +116,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:text="@string/label_address_optional"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_address"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="postalAddress"
             android:hint="@string/hint_address"
             android:inputType="textPostalAddress"
@@ -121,15 +135,17 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:text="@string/label_password"
-            android:textSize="14sp" />
+            android:textColor="@color/text_secondary"
+            android:fontFamily="@font/poppins_medium"
+            android:textSize="13sp" />
 
         <EditText
             android:id="@+id/input_password"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="4dp"
+            android:layout_marginTop="6dp"
             android:autofillHints="newPassword"
             android:hint="@string/hint_password_rule"
             android:inputType="textPassword"
@@ -141,7 +157,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="16dp"
             android:padding="8dp"
-            android:textColor="#B00020"
+            android:textColor="@color/error_text"
             android:textSize="14sp"
             android:visibility="gone" />
 
@@ -149,7 +165,7 @@
             android:id="@+id/button_register"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
+            android:layout_marginTop="24dp"
             android:text="@string/create_account" />
 
         <ProgressBar
@@ -164,12 +180,13 @@
             android:id="@+id/link_sign_in"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
+            android:layout_marginTop="20dp"
             android:gravity="center"
             android:padding="8dp"
             android:text="@string/have_account_sign_in"
-            android:textSize="14sp"
-            android:textStyle="bold" />
+            android:textColor="@color/brand_cyan"
+            android:fontFamily="@font/poppins_semibold"
+            android:textSize="14sp" />
 
     </LinearLayout>
 </ScrollView>
