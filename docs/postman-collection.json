@@ -2238,7 +2238,7 @@
 		},
 		{
 			"name": "C - Energy reservations",
-			"description": "Energy slot reservations (Member C): create, update, cancel and approve, with the 7 day rule (rule 5), the 12 hour rule (rule 6) and the station deactivation block (rule 7).\n\n**Self-contained:** the C-0x/C-1x setup requests create their own Grid Operator, two prosumers, a station and slots, so this folder only needs the API running and the seeded Backoffice account. Run the whole folder with **Run folder**, in order - later requests use ids saved by earlier ones.\n\nSlot times are worked out at run time, so the rules give the same result whenever it is run. Each run adds new test records; nothing is deleted.",
+			"description": "Energy slot reservations (Member C): create, update, cancel and approve, with the 7 day rule (rule 5), the 12 hour rule (rule 6) and the station deactivation block (rule 7).\n\n**Self-contained:** the C-0x/C-1x setup requests create their own Grid Operator, two prosumers, a station and slots, so this folder only needs the API running and the seeded Backoffice account. Run the whole folder with **Run folder**, in order - later requests use ids saved by earlier ones.\n\nThe test stations are open 00:00-23:59 and slots are placed at fixed Sri Lanka clock times, so the folder gives the same result at any time of day (the station operating-hours check never rejects a test slot). Each run adds new test records; nothing is deleted.",
 			"item": [
 				{
 					"name": "C-00 Setup - Login Backoffice (saves token)",
@@ -2693,7 +2693,7 @@
 						},
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Reservation Test Hub\",\n    \"address\": \"1 Lake Road, Kandy\",\n    \"latitude\": 7.2906,\n    \"longitude\": 80.6337,\n    \"capacityKwh\": 120,\n    \"operatingStartTime\": \"06:00\",\n    \"operatingEndTime\": \"20:00\"\n}"
+							"raw": "{\n    \"name\": \"Reservation Test Hub\",\n    \"address\": \"1 Lake Road, Kandy\",\n    \"latitude\": 7.2906,\n    \"longitude\": 80.6337,\n    \"capacityKwh\": 120,\n    \"operatingStartTime\": \"00:00\",\n    \"operatingEndTime\": \"23:59\"\n}"
 						}
 					},
 					"response": []
@@ -2706,8 +2706,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
-									"var start = new Date(Date.now() + 2 * 86400000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot A: 10:00 Sri Lanka time, 2 days from today (always within the 7 day rule).",
+									"var start = slAt(2, 10, 0);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -2765,8 +2776,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
-									"var start = new Date(Date.now() + 3 * 86400000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot B: 10:00 Sri Lanka time, 3 days from today.",
+									"var start = slAt(3, 10, 0);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -2824,8 +2846,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
-									"var start = new Date(Date.now() + 4 * 86400000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot C: 10:00 Sri Lanka time, 4 days from today.",
+									"var start = slAt(4, 10, 0);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -2876,15 +2909,31 @@
 					"response": []
 				},
 				{
-					"name": "C-13 Setup - Slot Near, in 6 hours",
+					"name": "C-13 Setup - Slot Near, about 6 hours away",
 					"event": [
 						{
 							"listen": "prerequest",
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// About 6 hours from now: in the future but under 12 hours away, for the 12 hour rule tests.",
+									"// If the 1 hour slot would run past Sri Lanka midnight, start it at 00:05 instead (still under 12 hours away).",
 									"var start = new Date(Date.now() + 6 * 3600000);",
+									"if (slDate(start) !== slDate(new Date(start.getTime() + 3600000 + 60000))) {",
+									"    var sl = new Date(start.getTime() + SL_OFFSET);",
+									"    start = new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + 1, 0, 5) - SL_OFFSET);",
+									"}",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -2942,8 +2991,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
-									"var start = new Date(Date.now() + 8 * 86400000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Slot Far: 10:00 Sri Lanka time, 8 days from today (always beyond the 7 day rule).",
+									"var start = slAt(8, 10, 0);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -3001,8 +3061,23 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Slot start is worked out at run time so the 7 day and 12 hour rules always apply the same way.",
-									"var start = new Date(Date.now() + -2 * 3600000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// About 2 hours ago, so the slot has already started. If the 1 hour slot would run past Sri Lanka",
+									"// midnight, move it 2 hours earlier so it still starts and ends on the same day (and is still past).",
+									"var start = new Date(Date.now() - 2 * 3600000);",
+									"if (slDate(start) !== slDate(new Date(start.getTime() + 3600000 + 60000))) {",
+									"    start = new Date(start.getTime() - 2 * 3600000);",
+									"}",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -4370,7 +4445,7 @@
 						},
 						"body": {
 							"mode": "raw",
-							"raw": "{\n    \"name\": \"Rule 7 Test Hub\",\n    \"address\": \"2 Hill Street, Kandy\",\n    \"latitude\": 7.29,\n    \"longitude\": 80.63,\n    \"capacityKwh\": 80,\n    \"operatingStartTime\": \"06:00\",\n    \"operatingEndTime\": \"20:00\"\n}"
+							"raw": "{\n    \"name\": \"Rule 7 Test Hub\",\n    \"address\": \"2 Hill Street, Kandy\",\n    \"latitude\": 7.29,\n    \"longitude\": 80.63,\n    \"capacityKwh\": 80,\n    \"operatingStartTime\": \"00:00\",\n    \"operatingEndTime\": \"23:59\"\n}"
 						}
 					},
 					"response": []
@@ -4383,7 +4458,19 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"var start = new Date(Date.now() + 2 * 86400000);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Rule 7 slot: 10:00 Sri Lanka time, 2 days from today, at the second station.",
+									"var start = slAt(2, 10, 0);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", new Date(start.getTime() + 3600000).toISOString());"
 								]
@@ -4607,13 +4694,24 @@
 							"script": {
 								"type": "text/javascript",
 								"exec": [
-									"// Two days ahead, at a fixed minute so the 'same time' update below matches exactly.",
-									"var start = new Date(Date.now() + 2 * 86400000 + 5 * 3600000);",
-									"start.setUTCSeconds(0, 0);",
+									"// Sri Lanka time is UTC+5:30 all year (no daylight saving). Test slots are placed at fixed",
+									"// Sri Lanka clock times, so they always fall inside the test station's hours (00:00-23:59) and",
+									"// never cross midnight, whatever time of day this folder is run.",
+									"var SL_OFFSET = 5.5 * 3600000;",
+									"function slAt(daysAhead, hour, minute) {",
+									"    var sl = new Date(Date.now() + SL_OFFSET);",
+									"    return new Date(Date.UTC(sl.getUTCFullYear(), sl.getUTCMonth(), sl.getUTCDate() + daysAhead, hour, minute) - SL_OFFSET);",
+									"}",
+									"function slDate(d) {",
+									"    return new Date(d.getTime() + SL_OFFSET).toISOString().slice(0, 10);",
+									"}",
+									"// Guard slot: 14:00-15:00 Sri Lanka time, 2 days from today, at a fixed minute so the",
+									"// 'same time' update below matches exactly. It does not overlap Slot A (10:00) at this station.",
+									"var start = slAt(2, 14, 0);",
 									"var end = new Date(start.getTime() + 3600000);",
 									"pm.collectionVariables.set(\"resSlotStart\", start.toISOString());",
 									"pm.collectionVariables.set(\"resSlotEnd\", end.toISOString());",
-									"// The same slot moved one hour later, used to try changing a booked slot's time.",
+									"// The same slot moved one hour later (15:00-16:00), used to try changing a booked slot's time.",
 									"pm.collectionVariables.set(\"resSlotMovedStart\", new Date(start.getTime() + 3600000).toISOString());",
 									"pm.collectionVariables.set(\"resSlotMovedEnd\", new Date(end.getTime() + 3600000).toISOString());"
 								]
@@ -4964,6 +5062,107 @@
 								"deactivate"
 							]
 						}
+					},
+					"response": []
+				},
+				{
+					"name": "C-98 Reserved slots at the test station (200, booked listed, cancelled not)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 200 OK\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"var ids = pm.response.json();",
+									"pm.test(\"Slot A (booked by Prosumer Two) and Slot Near (booked) are listed\", function () {",
+									"    pm.expect(ids).to.include(pm.collectionVariables.get(\"resSlotA\"));",
+									"    pm.expect(ids).to.include(pm.collectionVariables.get(\"resSlotNear\"));",
+									"});",
+									"pm.test(\"Slot B and the guard slot (their bookings were cancelled) are not listed\", function () {",
+									"    pm.expect(ids).to.not.include(pm.collectionVariables.get(\"resSlotB\"));",
+									"    pm.expect(ids).to.not.include(pm.collectionVariables.get(\"resGuardSlotId\"));",
+									"});",
+									"pm.test(\"Only slot ids come back - nobody's name or NIC\", function () {",
+									"    ids.forEach(function (id) { pm.expect(id).to.be.a(\"string\"); });",
+									"    pm.expect(pm.response.text()).to.not.include(pm.collectionVariables.get(\"resProsumer2Nic\"));",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/reserved-slots?stationId={{resStationId}}",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"reserved-slots"
+							],
+							"query": [
+								{
+									"key": "stationId",
+									"value": "{{resStationId}}"
+								}
+							]
+						},
+						"description": "Booking screens use this to show slots someone already booked as faded and not selectable. Called with a prosumer token: any logged-in user may ask, because only slot ids are returned."
+					},
+					"response": []
+				},
+				{
+					"name": "C-99 Reserved slots with a bad station id (400)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"type": "text/javascript",
+								"exec": [
+									"pm.test(\"Status is 400 Bad Request\", function () {",
+									"    pm.response.to.have.status(400);",
+									"});"
+								]
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [
+							{
+								"key": "Authorization",
+								"value": "Bearer {{resProsumerToken}}"
+							}
+						],
+						"url": {
+							"raw": "{{baseUrl}}/api/reservations/reserved-slots?stationId=not-an-id",
+							"host": [
+								"{{baseUrl}}"
+							],
+							"path": [
+								"api",
+								"reservations",
+								"reserved-slots"
+							],
+							"query": [
+								{
+									"key": "stationId",
+									"value": "not-an-id"
+								}
+							]
+						},
+						"description": "The station id is checked by the API before any lookup."
 					},
 					"response": []
 				},

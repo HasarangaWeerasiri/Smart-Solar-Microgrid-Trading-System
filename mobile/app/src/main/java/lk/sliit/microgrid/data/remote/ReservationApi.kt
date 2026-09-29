@@ -45,6 +45,15 @@ object ReservationApi {
     }
 
     /**
+     * Ids of the slots at a station already held by an active booking
+     * (GET /api/reservations/reserved-slots). Only slot ids come back, never who booked them.
+     */
+    fun reservedSlotIds(stationId: String, token: String): Set<String> {
+        val array = ApiClient.requestArray("/api/reservations/reserved-slots?stationId=$stationId", token = token)
+        return (0 until array.length()).map { index -> array.getString(index) }.toSet()
+    }
+
+    /**
      * Lists the logged-in prosumer's own reservations (GET /api/reservations). The API only
      * ever returns the caller's own bookings, whatever the app asks for.
      */

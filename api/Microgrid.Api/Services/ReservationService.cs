@@ -620,6 +620,27 @@ public class ReservationService : IReservationService
     }
 
     /// <summary>
+    /// Returns the ids of the slots at a station that are held by an active (Pending or Approved)
+    /// reservation that has not ended, so booking screens can show them as already taken.
+    /// Only slot ids are returned - never who booked them - so any logged-in user may ask.
+    /// </summary>
+    public async Task<ServiceResult<List<string>>> GetReservedSlotIdsAsync(string stationId)
+    {
+        if (!ObjectId.TryParse(stationId, out _))
+        {
+            return ServiceResult<List<string>>.Fail("Invalid station id.", 400);
+        }
+
+        var now = DateTime.UtcNow;
+        var filter = Builders<EnergyReservation>.Filter.Eq(r => r.StationId, stationId)
+                     & Builders<EnergyReservation>.Filter.In(r => r.Status, ReservationStatus.Active)
+                     & Builders<EnergyReservation>.Filter.Gt(r => r.ReservationEnd, now);
+
+        var slotIds = await _reservations.Distinct(r => r.SlotId, filter).ToListAsync();
+        return ServiceResult<List<string>>.Ok(slotIds);
+    }
+
+    /// <summary>
     /// Checks every rule a slot must pass before it can be booked: it exists, is active and
     /// available, its station is active, it starts in the future and within 7 days, and no
     /// other active reservation holds it. excludeReservationId skips the booking being moved.

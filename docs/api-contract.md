@@ -167,6 +167,7 @@ Collection: `EnergyReservation`. One reservation books one slot (`EnergyBookingS
 | PUT | `/api/reservations/{id}` | Owner or staff | Move to another slot. Goes back to `Pending` and the approval is cleared. | 400 12-hour rule / 7-day rule / same slot, 403, 404, 409 not Pending/Approved or new slot taken |
 | PATCH | `/api/reservations/{id}/cancel` | Owner or staff | Cancel. The slot becomes free again. **POST on the same route does the same**, because Android's `HttpURLConnection` cannot send PATCH; the Android app uses POST. | 400 12-hour rule, 403, 404, 409 not Pending/Approved |
 | PATCH | `/api/reservations/{id}/approve` | **Backoffice or Grid Operator** | `Pending` → `Approved`. | 403, 404, 409 not Pending or time already passed |
+| GET | `/api/reservations/reserved-slots?stationId=` | Any logged-in user | Ids of the slots at that station held by an active (Pending or Approved) booking that has not ended, e.g. `["66f1…", "66f2…"]`. **Slot ids only, never who booked them.** Booking screens use it to show taken slots faded and not selectable; the booking itself is still checked by the API. | 400 bad station id, 401 no token |
 
 ### Listing, searching and paging (`GET /api/reservations`)
 
