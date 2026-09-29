@@ -117,6 +117,17 @@ public class ReservationsController : ApiControllerBase
     }
 
     /// <summary>
+    /// Ids of the slots at a station that are already booked (Pending or Approved), so the
+    /// booking screens can show them faded and not selectable. Any logged-in user may call it:
+    /// it returns slot ids only, never who booked them.
+    /// </summary>
+    [HttpGet("reserved-slots")]
+    public async Task<IActionResult> GetReservedSlots([FromQuery] string? stationId)
+    {
+        return ToResponse(await _reservationService.GetReservedSlotIdsAsync(stationId ?? string.Empty));
+    }
+
+    /// <summary>
     /// Reservation counts by status, for dashboard tiles. A prosumer gets counts for their
     /// own bookings only; staff get system-wide counts.
     /// </summary>

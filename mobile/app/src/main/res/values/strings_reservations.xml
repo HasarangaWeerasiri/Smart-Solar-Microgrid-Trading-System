@@ -56,6 +56,9 @@
     <string name="slots_none_at_station">This station has no open slots right now.</string>
     <string name="slots_none_on_day">No open slots on this day.</string>
     <string name="slots_count">%1$d open slot(s). Tap one to choose it.</string>
+    <string name="slots_count_with_booked">%1$d open slot(s), %2$d already booked. Tap an open one to choose it.</string>
+    <string name="slots_all_booked">All slots here are already booked. Try another day or station.</string>
+    <string name="slot_option_booked">%1$s  ·  Already booked\n%2$s (%3$s)</string>
     <string name="slot_option">%1$s\n%2$s (%3$s)</string>
     <string name="book_rule_note">Reservations must be within the next 7 days. The server checks this when you book.</string>
     <string name="book_this_slot">Book this slot</string>

@@ -70,6 +70,12 @@ public interface IReservationService
     Task<bool> HasActiveReservationsForSlotAsync(string slotId);
 
     /// <summary>
+    /// Ids of the slots at a station currently held by an active booking, so booking screens
+    /// can show them as already taken. Returns slot ids only, never who booked them.
+    /// </summary>
+    Task<ServiceResult<List<string>>> GetReservedSlotIdsAsync(string stationId);
+
+    /// <summary>
     /// Counts reservations by status. A prosumer only ever gets counts for their own NIC;
     /// staff get system-wide counts.
     /// </summary>

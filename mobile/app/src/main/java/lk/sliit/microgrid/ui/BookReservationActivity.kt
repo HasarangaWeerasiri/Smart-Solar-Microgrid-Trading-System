@@ -87,6 +87,10 @@ class BookReservationActivity : NetworkPermissionActivity() {
     private var stations: List<Station> = emptyList()
     private var openSlots: List<EnergySlot> = emptyList()
 
+    // Ids of the station's slots already held by someone's booking, as reported by the API.
+    // These are shown faded and cannot be chosen.
+    private var bookedSlotIds: Set<String> = emptySet()
+
     // Day chosen in the date filter, as "yyyy-MM-dd" in local time. Null means any day.
     private var selectedDay: String? = null
 
@@ -216,8 +220,9 @@ class BookReservationActivity : NetworkPermissionActivity() {
 
     /**
      * Reads one station's slots on a background thread and keeps the open, upcoming ones,
-     * soonest first. In change mode the booking's current slot is left out. Only the answer to
-     * the newest request is shown.
+     * soonest first, together with which of them are already booked (asked from the API, since
+     * a prosumer cannot see other people's bookings). In change mode the booking's current slot
+     * is left out. Only the answer to the newest request is shown.
      */
     private fun loadSlots(station: Station) {
         val requestId = ++slotRequest
@@ -233,10 +238,12 @@ class BookReservationActivity : NetworkPermissionActivity() {
                         .filter { it.status == "Active" && it.isAvailable && it.id != changeSlotId }
                         .filter { (ReservationTime.parse(it.startTime)?.time ?: 0L) > now }
                         .sortedBy { ReservationTime.parse(it.startTime)?.time ?: 0L }
+                    val booked = ReservationApi.reservedSlotIds(station.id, token)
 
                     mainHandler.post {
                         if (isFinishing || isDestroyed || requestId != slotRequest) return@post
                         openSlots = open
+                        bookedSlotIds = booked
                         showSlots()
                     }
                 } catch (exception: ApiException) {
@@ -249,7 +256,9 @@ class BookReservationActivity : NetworkPermissionActivity() {
     }
 
     /**
-     * Shows the open slots as a list of choices, narrowed to the chosen day when there is one.
+     * Shows the slots as a list of choices, narrowed to the chosen day when there is one.
+     * Slots someone has already booked stay in the list so the prosumer can see them, but are
+     * faded, marked "Already booked" and cannot be chosen.
      */
     private fun showSlots() {
         slotGroup.removeAllViews()
@@ -262,26 +271,34 @@ class BookReservationActivity : NetworkPermissionActivity() {
                 ReservationTime.parse(slot.startTime)?.let { ReservationTime.localDayKey(it) } == day
             }
         }
+        val bookedCount = visible.count { it.id in bookedSlotIds }
+        val freeCount = visible.size - bookedCount
 
         slotsHint.text = when {
             openSlots.isEmpty() -> getString(R.string.slots_none_at_station)
             visible.isEmpty() -> getString(R.string.slots_none_on_day)
-            else -> getString(R.string.slots_count, visible.size)
+            freeCount == 0 -> getString(R.string.slots_all_booked)
+            bookedCount > 0 -> getString(R.string.slots_count_with_booked, freeCount, bookedCount)
+            else -> getString(R.string.slots_count, freeCount)
         }
 
         val padding = (10 * resources.displayMetrics.density).toInt()
         for (slot in visible) {
+            val isBooked = slot.id in bookedSlotIds
             val option = RadioButton(this).apply {
                 id = View.generateViewId()
                 tag = slot.id
                 text = getString(
-                    R.string.slot_option,
+                    if (isBooked) R.string.slot_option_booked else R.string.slot_option,
                     slot.slotName,
                     ReservationTime.formatRange(slot.startTime, slot.endTime),
                     ReservationTime.formatRelative(slot.startTime)
                 )
                 textSize = 15f
                 setPadding(padding / 2, padding, 0, padding)
+                // A booked slot is visible but faded and cannot be selected.
+                isEnabled = !isBooked
+                alpha = if (isBooked) 0.4f else 1f
             }
             slotGroup.addView(
                 option,
