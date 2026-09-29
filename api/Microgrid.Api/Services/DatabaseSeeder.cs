@@ -119,7 +119,13 @@ public class DatabaseSeeder : IDatabaseSeeder
         await EnsureIndexesAsync();
         await EnsureReservationIndexesAsync();
         await EnsureBackofficeUserAsync();
-        await EnsureSampleDataAsync();
+
+        // Seed:SampleData defaults to true so local/dev startup behaves exactly as before.
+        // Production sets it to false, so real hosted data is never mixed with demo accounts.
+        if (_configuration.GetValue("Seed:SampleData", true))
+        {
+            await EnsureSampleDataAsync();
+        }
     }
 
     /// <summary>
