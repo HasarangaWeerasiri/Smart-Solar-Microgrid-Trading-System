@@ -16,13 +16,6 @@
  *              existing row by a stable natural key first - NIC, email, station name, slot
  *              name, or the prosumer+slot pair for a reservation - and does nothing when that
  *              row is already there, so running the seeder again changes nothing.)
- *              (Sample data across every collection added by Member D, 2026-09-28: two Grid
- *              Operators, four Prosumers, four stations, twelve slots and fourteen
- *              reservations spread deliberately across every status. Every step checks for an
- *              existing row by a stable natural key first - NIC, email, station name, slot
- *              name, or the prosumer+slot pair for a reservation - and does nothing when that
- *              row is already there, so running the seeder again changes nothing.)
->>>>>>> feature/seed-sample-data
  */
 
 using Microgrid.Api.Models;

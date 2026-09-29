@@ -6,6 +6,9 @@
  * Description: Calls for the prosumer endpoints of the Web API. These only send and receive
  *              data. Every rule - the NIC format, whether the NIC is already registered, and
  *              the fact that a new account starts Pending - is decided by the API.
+ *              (getProfile, updateProfile and requestDeactivation added 2026-09-29 for the
+ *              profile screen. The API only lets a prosumer read or change their own account,
+ *              so these send the saved login token.)
  */
 
 package lk.sliit.microgrid.data.remote
@@ -40,6 +43,48 @@ object ProsumerApi {
             .put("address", address ?: JSONObject.NULL)
 
         val response = ApiClient.request("/api/prosumers", method = "POST", body = body)
+        return toProfile(response)
+    }
+
+    /**
+     * Reads the prosumer's own profile. The API answers 403 if the token belongs to
+     * somebody else, so a prosumer can only ever load their own details.
+     */
+    fun getProfile(nic: String, token: String): ProsumerProfile {
+        val response = ApiClient.request("/api/prosumers/$nic", token = token)
+        return toProfile(response)
+    }
+
+    /**
+     * Saves changes to the prosumer's own profile. The NIC is not sent, because it is the
+     * account id and can never change. A blank newPassword means "keep the current one".
+     */
+    fun updateProfile(
+        nic: String,
+        token: String,
+        fullName: String,
+        email: String?,
+        phone: String?,
+        address: String?,
+        newPassword: String?
+    ): ProsumerProfile {
+        val body = JSONObject()
+            .put("fullName", fullName)
+            .put("email", email ?: JSONObject.NULL)
+            .put("phone", phone ?: JSONObject.NULL)
+            .put("address", address ?: JSONObject.NULL)
+            .put("newPassword", newPassword ?: JSONObject.NULL)
+
+        val response = ApiClient.request("/api/prosumers/$nic", method = "PUT", body = body, token = token)
+        return toProfile(response)
+    }
+
+    /**
+     * Asks the API to deactivate the prosumer's own account. After this the person can no
+     * longer log in, and only a Backoffice officer can activate the account again.
+     */
+    fun requestDeactivation(nic: String, token: String): ProsumerProfile {
+        val response = ApiClient.request("/api/prosumers/$nic/deactivate", method = "PATCH", token = token)
         return toProfile(response)
     }
 

@@ -101,6 +101,16 @@
             android:text="Nearby Grid Nodes"
             android:textAllCaps="false" />
 
+        <!-- Prosumer's own account: edit details and request deactivation. -->
+        <Button
+            android:id="@+id/button_profile"
+            style="@style/Widget.Microgrid.Button.Outline"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:text="@string/my_profile"
+            android:textAllCaps="false" />
+
         <View
             android:layout_width="match_parent"
             android:layout_height="0dp"

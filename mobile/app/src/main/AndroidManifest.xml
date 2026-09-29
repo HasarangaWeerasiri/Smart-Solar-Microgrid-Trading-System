@@ -66,6 +66,11 @@
             android:name=".ui.ProsumerHomeActivity"
             android:exported="false" />
 
+        <!-- Prosumer's own profile: edit details and request account deactivation. -->
+        <activity
+            android:name=".ui.ProfileActivity"
+            android:exported="false" />
+
         <!-- Nearby Grid Nodes -->
         <activity
             android:name=".ui.NearbyNodesActivity"

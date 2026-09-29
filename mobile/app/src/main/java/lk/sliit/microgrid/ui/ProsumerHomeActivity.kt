@@ -63,6 +63,11 @@ class ProsumerHomeActivity : AppCompatActivity() {
             openNearbyNodes()
         }
 
+        // Own account: edit profile details and request deactivation.
+        findViewById<Button>(R.id.button_profile).setOnClickListener {
+            startActivity(Intent(this, ProfileActivity::class.java))
+        }
+
         // Logout.
         findViewById<Button>(R.id.button_logout).setOnClickListener {
             logout()
