@@ -84,6 +84,15 @@
         android:layout_height="0dp"
         android:layout_weight="1" />
 
+    <!-- Prosumer's own account: edit details and request deactivation. -->
+    <Button
+        android:id="@+id/button_profile"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/my_profile"
+        android:textAllCaps="false" />
+
     <Button
         android:id="@+id/button_logout"
         android:layout_width="match_parent"
