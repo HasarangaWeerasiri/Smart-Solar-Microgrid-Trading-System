@@ -29,7 +29,7 @@ created automatically and is git-ignored, because the SDK path differs per machi
 
 ## Running it
 
-1. Start the API first: `cd api/Microgrid.Api` then `dotnet run`
+1. Start the API first — it is hosted on IIS at port 8080 (see `docs/deployment.md`)
 2. Start an emulator, or connect a phone
 3. Press Run in Android Studio, or from a terminal:
 
@@ -47,16 +47,25 @@ they use the web application.
 line in the git-ignored `mobile/local.properties` (the same file `MAPS_API_KEY` already lives
 in). Nothing in the Kotlin or Java source ever needs editing to repoint the app.
 
+The default, used when `local.properties` sets nothing, is `http://10.0.2.2:8080` — the
+emulator's alias for the IIS-hosted API on the host machine.
+
+To run against a physical device, override it in `mobile/local.properties`:
+
 ```properties
 # mobile/local.properties (created automatically, git-ignored)
-API_BASE_URL=http://192.168.1.6:5288
+API_BASE_URL=http://172.20.10.4:8080
 ```
 
 | Where the app runs | Address to use |
 | --- | --- |
-| Android emulator | `http://10.0.2.2:5288` (default when `API_BASE_URL` is not set at all) |
-| Real phone on the same Wi-Fi | `http://<your-machine-ip>:5288`, for example `http://192.168.1.6:5288` |
-| Published on IIS | The IIS address |
+| Android emulator | `http://10.0.2.2:8080` (default when `API_BASE_URL` is not set at all) |
+| Real phone on the same network | `http://<host-machine-address>:8080`, currently `http://172.20.10.4:8080` on this phone hotspot |
+| Published on IIS (general) | Whatever address/port the site is bound to — see `docs/deployment.md` |
+
+The `172.20.10.4` address is a phone hotspot IP — it can change whenever the phone
+reconnects or the hotspot restarts, so check it with `ipconfig` on the host machine before
+relying on it and update `local.properties` if it has moved.
 
 If you set it to a new address, add that address to
 `app/src/main/res/xml/network_security_config.xml` too, otherwise Android blocks the

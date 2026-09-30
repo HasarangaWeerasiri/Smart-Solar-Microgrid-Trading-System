@@ -43,14 +43,15 @@ object ApiClient {
 
     /**
      * Base address of the API, read from BuildConfig.API_BASE_URL (see app/build.gradle.kts),
-     * so it is set in exactly one place and never hard-coded in source. The default points at
-     * the Android emulator's alias for the development machine; override it per machine or for
-     * the IIS-hosted API by adding a line to the git-ignored mobile/local.properties:
+     * so it is set in exactly one place and never hard-coded in source. The default
+     * (http://10.0.2.2:8080) points at the Android emulator's alias for the IIS-hosted API on
+     * the development machine; override it for a physical device by adding a line to the
+     * git-ignored mobile/local.properties:
      *
-     *     API_BASE_URL=http://192.168.1.6:5288
+     *     API_BASE_URL=http://172.20.10.4:8080
      *
-     * A real phone on the same Wi-Fi needs the machine's LAN address; a published API needs
-     * its IIS address. Whichever address is used must also be added to
+     * A real phone needs the host machine's LAN or hotspot address, which can change on
+     * reconnect. Whichever address is used must also be added to
      * res/xml/network_security_config.xml, since Android blocks plain HTTP otherwise.
      */
     const val BASE_URL: String = BuildConfig.API_BASE_URL

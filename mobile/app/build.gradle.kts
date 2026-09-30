@@ -33,13 +33,13 @@ android {
             localProperties.getProperty("MAPS_API_KEY", "")
 
         // The Web API's address, built into BuildConfig.API_BASE_URL (see ApiClient.kt).
-        // Override it per machine by adding a line to the git-ignored mobile/local.properties,
-        // for example: API_BASE_URL=http://192.168.1.6:5288
+        // The API is hosted on IIS at port 8080. Override it per machine by adding a line to
+        // the git-ignored mobile/local.properties, for example: API_BASE_URL=http://172.20.10.4:8080
         // Falls back to the Android emulator's alias for this machine when nothing is set.
         buildConfigField(
             "String",
             "API_BASE_URL",
-            "\"${localProperties.getProperty("API_BASE_URL", "http://10.0.2.2:5288")}\""
+            "\"${localProperties.getProperty("API_BASE_URL", "http://10.0.2.2:8080")}\""
         )
     }
 

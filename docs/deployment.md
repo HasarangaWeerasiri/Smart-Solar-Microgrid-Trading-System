@@ -86,8 +86,9 @@ same way it excludes `appsettings.Development.json`.
 1. Open **IIS Manager** → right-click **Sites** → **Add Website**.
 2. **Site name**: `MicrogridApi` (or anything descriptive).
 3. **Physical path**: the publish folder you copied over, e.g. `C:\inetpub\microgrid-api`.
-4. **Binding**: pick a port that is free, e.g. `http`, port `5288` (matching the dev port keeps
-   the story simple in the report) or `80` if this machine is dedicated to the API.
+4. **Binding**: pick a port that is free — this project uses `http`, port `8080` (kept
+   deliberately different from the `dotnet run` dev port, `5288`, so both can be told apart at
+   a glance) — or `80` if this machine is dedicated to the API.
 5. Click OK. IIS creates a new Application Pool with the same name as the site.
 
 ### Set the Application Pool to "No Managed Code"
@@ -125,10 +126,10 @@ Open the port you bound the site to (step 4) so other machines on the network �
 users, the Android phone — can reach it:
 
 ```powershell
-New-NetFirewallRule -DisplayName "Microgrid API (IIS)" -Direction Inbound -Protocol TCP -LocalPort 5288 -Action Allow
+New-NetFirewallRule -DisplayName "Microgrid API (IIS)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow
 ```
 
-Replace `5288` with whatever port you actually chose.
+Replace `8080` with whatever port you actually chose.
 
 ## 7. Repoint the clients
 
@@ -137,20 +138,22 @@ Replace `5288` with whatever port you actually chose.
 Copy `web/.env.example` to `web/.env` if you have not already, then set:
 
 ```
-VITE_API_BASE_URL=http://<iis-server-address>:5288
+VITE_API_BASE_URL=http://<iis-server-address>:8080
 ```
 
-Rebuild/restart the Vite dev server (or rebuild for production) so the new value is picked up.
+`web/src/api/client.js` reads `VITE_API_BASE_URL` (falling back to `http://localhost:5288`,
+the `dotnet run` address, only if the variable is unset). Rebuild/restart the Vite dev server
+(or rebuild for production) so the new value is picked up.
 
 ### CORS — add the web app's real origin
 
 The API's `Cors:AllowedOrigins` (in `appsettings.Production.json` on the server, see step 3)
 must include the **origin the browser actually sends**, scheme + host + port, no trailing
-slash — for example:
+slash — for example, to allow a web app running on `http://localhost:5173`:
 
 ```json
 "Cors": {
-  "AllowedOrigins": [ "http://192.168.1.20:5173", "http://192.168.1.20" ]
+  "AllowedOrigins": [ "http://localhost:5173" ]
 }
 ```
 
@@ -160,24 +163,30 @@ the browser, not the server. Restart the site (or `iisreset`) after changing thi
 
 ### Android app
 
-The Android app currently does **not** read the API address from `BuildConfig` or
-`local.properties` — instead `app/src/main/java/lk/sliit/microgrid/data/remote/ApiClient.kt`
-hard-codes it in one place:
+The Android app reads the API address from `BuildConfig.API_BASE_URL`
+(`app/src/main/java/lk/sliit/microgrid/data/remote/ApiClient.kt`), which Gradle fills in at
+build time from `app/build.gradle.kts`. The default there is the Android emulator's alias for
+the IIS-hosted API, `http://10.0.2.2:8080`. Nothing in the Kotlin source needs editing to
+repoint the app.
 
-```kotlin
-const val BASE_URL: String = "http://<iis-server-address>:5288"
+To point at a different host (a physical device, or a different IIS server), add a line to
+the git-ignored `mobile/local.properties`:
+
+```properties
+API_BASE_URL=http://<iis-server-address>:8080
 ```
 
-Update that constant, then also add the same host to
-`app/src/main/res/xml/network_security_config.xml` (Android blocks plain HTTP to hosts that
-are not explicitly allow-listed there). Rebuild the app (`./gradlew assembleDebug`) after
-either change.
+then also add that host to `app/src/main/res/xml/network_security_config.xml` (Android blocks
+plain HTTP to hosts that are not explicitly allow-listed there), and re-sync/rebuild
+(`./gradlew assembleDebug`) so the new `BuildConfig.API_BASE_URL` takes effect. See
+`mobile/README.md` for the current physical-device address used on this team's network and a
+note on why phone-hotspot addresses don't stay fixed.
 
 ## 8. Verify
 
 1. **Health check** — from any machine on the network:
    ```powershell
-   curl http://<iis-server-address>:5288/api/ping
+   curl http://<iis-server-address>:8080/api/ping
    ```
    Expect `{"status":"connected","mongoResponse":"..."}`. `"status":"failed"` means the API
    started but cannot reach MongoDB — recheck `ConnectionStrings:MongoDB` in
@@ -198,5 +207,5 @@ either change.
 | **HTTP 502.5 – ANCM Out-Of-Process Startup Failure** (or the in-process equivalent, a blank 502) | The app process failed to start. Usually a missing/wrong .NET runtime version on the server (check `dotnet --info` lists `net10.0`), or the app pool is **not** set to "No Managed Code" (step 4). Turn on `stdoutLogEnabled` in `web.config` (see the comment there), reproduce, and read the newest file in the site's `logs` folder for the real exception. |
 | **HTTP 500.30 – ASP.NET Core app failed to start** | The app started under ANCM but crashed during startup — almost always the fail-fast checks in `Program.cs` throwing, because `ConnectionStrings:MongoDB` or `Jwt:Key` is missing or invalid in `appsettings.Production.json` (step 3). Check `Cors:AllowedOrigins` and `DatabaseSettings:DatabaseName` are present too. Turn on stdout logging (same as above) to see the exact `InvalidOperationException` message. |
 | Browser calls fail with a CORS error, but the same request works in Postman | `Cors:AllowedOrigins` in `appsettings.Production.json` does not list the web app's exact origin (scheme + host + port). See step 7. |
-| Android app can't reach the API at all (connection refused / timed out) | Either the firewall rule (step 6) is missing, `ApiClient.BASE_URL` still points at `10.0.2.2` or a stale IP (step 7), or the host is missing from `network_security_config.xml`. |
+| Android app can't reach the API at all (connection refused / timed out) | Either the firewall rule (step 6) is missing, `local.properties`' `API_BASE_URL` still points at the emulator default or a stale/changed hotspot IP (step 7), or the host is missing from `network_security_config.xml`. |
 | Site starts but every request 500s with a Mongo-related error in the logs | `ConnectionStrings:MongoDB` is reachable from your dev machine but not from the IIS server (firewall, IP allow-list on Atlas, or a local MongoDB service that isn't running on the server). Test with `mongosh` directly on the IIS server. |
