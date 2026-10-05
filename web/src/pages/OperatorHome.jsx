@@ -33,13 +33,6 @@ export default function OperatorHome() {
         Signed in as {user?.fullName} ({user?.email}).
       </p>
 
-      <div className="mt-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3">
-        <p className="text-sm text-amber-800">
-          Operator access. Admin functions such as user management are blocked for this role
-          by the API, not just hidden here.
-        </p>
-      </div>
-
       <h2 className="mt-8 text-sm font-semibold uppercase tracking-wide text-slate-500">
         Sections
       </h2>
